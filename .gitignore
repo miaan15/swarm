@@ -1,2 +1,5 @@
 build/
 vendor/build/
+build.ninja
+.ninja_deps
+.ninja_log
