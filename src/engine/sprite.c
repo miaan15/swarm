@@ -22,8 +22,8 @@ void sprite_sys_init(usize asset_cap, usize sprite_cap) {
     // TODO assign stub sprite
 }
 
-u32 sprite_asset_make(u32 texture_id, u32 w, u32 h) {
-    sprite_sys.asset_arr[sprite_sys.asset_len] = (sprite_asset){texture_id, w, h};
+u32 sprite_asset_make(u32 tex, u32 x, u32 y, u32 w, u32 h) {
+    sprite_sys.asset_arr[sprite_sys.asset_len] = (sprite_asset){tex, x, y, w, h};
     return sprite_sys.asset_len++;
 }
 

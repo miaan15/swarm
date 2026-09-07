@@ -35,7 +35,7 @@ extern struct sprite_sys sprite_sys;
 
 void sprite_sys_init(usize asset_cap, usize sprite_cap);
 
-u32 sprite_asset_make(u32 texture_id, u32 w, u32 h);
+u32 sprite_asset_make(u32 tex, u32 x, u32 y, u32 w, u32 h);
 sprite_asset sprite_asset_get(usize idx);
 
 u32 sprite_create(u32 asset_idx);
