@@ -22,15 +22,15 @@ static inline void arena_destroy(arena *ar) {
     memset(ar, 0, sizeof(arena));
 }
 
-static inline void *arena_alloc_raw(arena *ar, usize size, usize align) {
-    usize offs = align_up(ar->offs, align);
+static inline void *arena_alloc_raw(arena *ar, usize size) {
+    usize offs = align_up(ar->offs, alignof(max_align_t));
     if (offs + size > ar->cap) { return NULL; }
     ar->offs = offs + size;
     return (char *)ar->raw + offs;
 }
 
-static inline void *arena_alloc(arena *ar, usize size, usize align) {
-    void *ptr = arena_alloc_raw(ar, size, align);
+static inline void *arena_alloc(arena *ar, usize size) {
+    void *ptr = arena_alloc_raw(ar, size);
     memset(ptr, 0, size);
     return ptr;
 }
@@ -46,6 +46,5 @@ static inline void arena_init_over(arena *ar, void *base, usize cap) {
 }
 
 static inline void arena_init_in_arena(arena *ar, arena *base_ar, usize cap) {
-    arena_init_over(ar, arena_alloc_raw(base_ar, cap, alignof(max_align_t)), cap);
+    arena_init_over(ar, arena_alloc_raw(base_ar, cap), cap);
 }
-

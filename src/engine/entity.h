@@ -7,6 +7,9 @@ typedef struct {
     u32 pool_flag;
 
     Vector2 position;
+
+    u32 sprite_begin;
+    u32 sprite_len;
 } entity;
 
 struct entity_sys {
@@ -14,11 +17,12 @@ struct entity_sys {
     usize cap;
     usize head;
     usize max_idx;
-    usize len;
+    u32 len;
 };
 extern struct entity_sys entity_sys;
 
 void entity_sys_init(usize cap);
 
-entity *entity_create();
-void entity_destroy(entity *ett);
+u32 entity_create();
+void entity_destroy(u32 idx);
+entity *entity_get(usize idx);
