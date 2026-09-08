@@ -5,8 +5,6 @@
 #include "sprite.h"
 #include <assert.h>
 
-#define ALIVE_POOL_FLAG ((u32)-1)
-
 struct entity_sys entity_sys = {0};
 
 void entity_sys_init(usize cap) {
@@ -71,5 +69,9 @@ void entity_destroy(u32 idx) {
 }
 
 entity *entity_get(usize idx) {
+    if (idx == 0 || idx >= entity_sys.max_idx) {
+        log_err("entity_get(): entity invalid => stub");
+        return &entity_sys.entity_pool[0];
+    }
     return &entity_sys.entity_pool[idx];
 }

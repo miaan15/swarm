@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <stdbool.h>
 
         //                  //
 typedef int8_t              i8;
@@ -25,6 +24,14 @@ typedef uintptr_t           uptr;
 typedef intptr_t            iptr;
 
 //
-static inline size_t align_up(size_t base, size_t align) {
+static constexpr const char PROJECT_DIR[] = _PROJECT_DIR;
+static constexpr const char SRC_DIR[] = _PROJECT_DIR "/src";
+static constexpr const char ASSET_DIR[] = _PROJECT_DIR "/asset";
+
+//
+#define ALIVE_POOL_FLAG ((u32)-1)
+
+//
+[[nodiscard]] static inline size_t align_up(size_t base, size_t align) {
     return (base + align - 1) & ~(align - 1);
 }

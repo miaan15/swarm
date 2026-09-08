@@ -1,7 +1,6 @@
 #pragma once
 
 #include "define.h"
-#include <stdalign.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,14 +21,14 @@ static inline void arena_destroy(arena *ar) {
     memset(ar, 0, sizeof(arena));
 }
 
-static inline void *arena_alloc_raw(arena *ar, usize size) {
+[[nodiscard]] static inline void *arena_alloc_raw(arena *ar, usize size) {
     usize offs = align_up(ar->offs, alignof(max_align_t));
     if (offs + size > ar->cap) { return NULL; }
     ar->offs = offs + size;
     return (char *)ar->raw + offs;
 }
 
-static inline void *arena_alloc(arena *ar, usize size) {
+[[nodiscard]] static inline void *arena_alloc(arena *ar, usize size) {
     void *ptr = arena_alloc_raw(ar, size);
     memset(ptr, 0, size);
     return ptr;

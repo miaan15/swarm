@@ -3,35 +3,36 @@
 #include "context.h"
 #include "log.h"
 
-#define ALIVE_POOL_FLAG ((u32)-1)
-
 struct sprite_sys sprite_sys = {0};
 
-void sprite_sys_init(usize asset_cap, usize sprite_cap) {
-    sprite_sys.asset_arr = arena_alloc(&omni_arena, asset_cap * sizeof(sprite_asset));
-    sprite_sys.asset_cap = asset_cap;
+void sprite_sys_init(usize prf_cap, usize sprite_cap) {
+    sprite_sys.prf_arr = arena_alloc(&omni_arena, prf_cap * sizeof(sprite_prf));
+    sprite_sys.prf_cap = prf_cap;
 
     sprite_sys.sprite_pool = arena_alloc(&omni_arena, sprite_cap * sizeof(sprite));
     sprite_sys.cap = sprite_cap;
 
     // stub
-    sprite_sys.asset_len = 1;
-    // TODO assign stub sprite asset
+    sprite_sys.prf_len = 1;
+    // TODO assign stub sprite prf
 
     sprite_sys.head = sprite_sys.max_idx = sprite_sys.len = 1;
     // TODO assign stub sprite
 }
 
-u32 sprite_asset_make(u32 tex, u32 x, u32 y, u32 w, u32 h) {
-    sprite_sys.asset_arr[sprite_sys.asset_len] = (sprite_asset){tex, x, y, w, h};
-    return sprite_sys.asset_len++;
+u32 sprite_prf_make(u32 tex, u32 x, u32 y, u32 w, u32 h) {
+    sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_prf){tex, x, y, w, h};
+
+    log_debug("Made SpriteProfile [%u]: Texture = [%u]; x = %u; y = %u; w = %u; h = %u", sprite_sys.prf_len, tex, x, y, w, h);
+
+    return sprite_sys.prf_len++;
 }
 
-sprite_asset sprite_asset_get(usize idx) {
-    return sprite_sys.asset_arr[idx];
+sprite_prf sprite_prf_get(usize idx) {
+    return sprite_sys.prf_arr[idx];
 }
 
-u32 sprite_create(u32 asset_idx) {
+u32 sprite_create(u32 prf_idx) {
     if (sprite_sys.len >= sprite_sys.cap) {
         log_err("sprite_create(): too much sprites => stub");
         return 0;
@@ -50,9 +51,10 @@ u32 sprite_create(u32 asset_idx) {
     ++sprite_sys.len;
 
     memset(spr, 0, sizeof(sprite));
-    spr->asset_idx = asset_idx;
+    spr->pool_flag = ALIVE_POOL_FLAG;
+    spr->prf_idx = prf_idx;
 
-    log_debug("Created Sprite [%u]", idx);
+    log_debug("Created Sprite [%u]: SpriteProfile = [%u]", idx, prf_idx);
 
     return idx;
 }
@@ -74,5 +76,9 @@ void sprite_destroy(u32 idx) {
 }
 
 sprite *sprite_get(usize idx) {
+    if (idx == 0 || idx >= sprite_sys.max_idx) {
+        log_err("sprite_get(): sprite invalid => stub");
+        return &sprite_sys.sprite_pool[0];
+    }
     return &sprite_sys.sprite_pool[idx];
 }

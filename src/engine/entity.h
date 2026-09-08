@@ -25,4 +25,5 @@ void entity_sys_init(usize cap);
 
 u32 entity_create();
 void entity_destroy(u32 idx);
-entity *entity_get(usize idx);
+
+[[nodiscard]] entity *entity_get(usize idx);

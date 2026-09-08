@@ -48,30 +48,27 @@ done
 
 MAIN_OBJ="build/src/main.o"
 
+SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}")
+PROJECT_DIR=$(dirname -- "$SCRIPT_PATH")
+
 # make ninja
 mkdir -p build
-cat << 'EOF' > build.ninja
+cat << 'EOF'| sed "s|@PROJECT_DIR@|$PROJECT_DIR|g" > build.ninja
 # vars
-cflags = -Wall -Wextra -O0 -g -Isrc -Isrc/engine -Isrc/game -Ivendor/raylib/src
-ldflags_main = -ldl -lm -lpthread -Lvendor/build/raylib/raylib -lraylib -Wl,-rpath,vendor/build/raylib/raylib
-ldflags_game = -lm -Lvendor/build/raylib/raylib -lraylib
+cflags = -std=c23 -Wall -Wextra -fsanitize=address,undefined -O0 -g -Isrc -Isrc/engine -Isrc/game -Ivendor/raylib/src
+ldflags = -fsanitize=address,undefined -ldl -lm -lpthread -Lvendor/build/raylib/raylib -lraylib -Wl,-rpath,vendor/build/raylib/raylib
 
 # rules
 rule cc
   depfile = $out.d
   deps = gcc
-  command = gcc -MD -MF $out.d $cflags -c $in -o $out
-
-rule cc_pic
-  depfile = $out.d
-  deps = gcc
-  command = gcc -MD -MF $out.d $cflags -c $in -o $out -fPIC
+  command = gcc -MD -MF $out.d $cflags -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\""
 
 rule link_exe
-  command = gcc $in -o $out $ldflags_main
+  command = gcc $in -o $out $ldflags
 
 rule link_shared
-  command = gcc -shared $in -o $out $ldflags_game
+  command = gcc -shared $in -o $out $ldflags
 
 EOF
 
@@ -81,7 +78,7 @@ EOF
     echo "build build/${src%.c}.o: cc $src"
   done
   for src in $GAME_SRCS; do
-    echo "build build/${src%.c}.o: cc_pic $src"
+    echo "build build/${src%.c}.o: cc $src"
   done
   echo "build $MAIN_OBJ: cc $MAIN_SRC"
   echo ""

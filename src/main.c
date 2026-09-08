@@ -9,6 +9,8 @@ int main(void)
 
     InitWindow(screenWidth, screenHeight, "swarm");
 
+    SetTargetFPS(60);
+
     engine_init();
 
     while (!WindowShouldClose()) {
@@ -21,6 +23,8 @@ int main(void)
             engine_draw();
         EndDrawing();
     }
+
+    engine_destroy();
 
     CloseWindow();
 
