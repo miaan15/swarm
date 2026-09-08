@@ -21,6 +21,7 @@ int main(void)
         BeginDrawing();
             ClearBackground(RAYWHITE);
             engine_draw();
+            DrawFPS(10, 10);
         EndDrawing();
     }
 

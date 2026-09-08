@@ -1,6 +1,7 @@
 #include "sprite.h"
 
 #include "context.h"
+#include "draw.h"
 #include "log.h"
 
 struct sprite_sys sprite_sys = {0};
@@ -20,10 +21,10 @@ void sprite_sys_init(usize prf_cap, usize sprite_cap) {
     // TODO assign stub sprite
 }
 
-u32 sprite_prf_make(u32 tex, u32 x, u32 y, u32 w, u32 h) {
+u32 sprite_prf_make(u32 tex, f32 x, f32 y, f32 w, f32 h) {
     sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_prf){tex, x, y, w, h};
 
-    log_debug("Made SpriteProfile [%u]: Texture = [%u]; x = %u; y = %u; w = %u; h = %u", sprite_sys.prf_len, tex, x, y, w, h);
+    log_debug("Made SpriteProfile [%u]: Texture = [%u]; x = %.0f; y = %.0f; w = %.0f; h = %.0f", sprite_sys.prf_len, tex, x, y, w, h);
 
     return sprite_sys.prf_len++;
 }
@@ -81,4 +82,22 @@ sprite *sprite_get(usize idx) {
         return &sprite_sys.sprite_pool[0];
     }
     return &sprite_sys.sprite_pool[idx];
+}
+
+void sprite_draw() {
+    for (usize i = 1; i < sprite_sys.max_idx; ++i) {
+        sprite spr = sprite_sys.sprite_pool[i];
+        if (spr.pool_flag != ALIVE_POOL_FLAG) continue;
+
+        sprite_prf spr_prf = sprite_prf_get(spr.prf_idx);
+
+        drawer *drr = draw_make();
+        drr->tex = spr_prf.tex;
+        memcpy(&drr->sx, &spr_prf.x, 4 * sizeof(f32));
+        drr->dx = spr.x;
+        drr->dy = spr.y;
+        drr->dw = spr_prf.w;
+        drr->dh = spr_prf.h;
+        draw_meta_set_y(&drr->meta, drr->dy);
+    }
 }

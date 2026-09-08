@@ -35,10 +35,12 @@ extern struct sprite_sys sprite_sys;
 
 void sprite_sys_init(usize prf_cap, usize sprite_cap);
 
-u32 sprite_prf_make(u32 tex, u32 x, u32 y, u32 w, u32 h);
+u32 sprite_prf_make(u32 tex, f32 x, f32 y, f32 w, f32 h);
 [[nodiscard]] sprite_prf sprite_prf_get(usize idx);
 
 u32 sprite_create(u32 prf_idx);
 void sprite_destroy(u32 idx);
 
 [[nodiscard]] sprite *sprite_get(usize idx);
+
+void sprite_draw();
