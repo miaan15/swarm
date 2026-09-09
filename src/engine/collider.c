@@ -40,46 +40,46 @@ u32 collider_create(collider **r_collider) {
     }
 
     usize idx = collider_sys.collider_head;
-    collider *bx = &collider_sys.collider_pool[idx];
+    collider *col = &collider_sys.collider_pool[idx];
 
     if (idx == collider_sys.collider_max_idx) {
         ++collider_sys.collider_max_idx;
         ++collider_sys.collider_head;
     } else {
-        collider_sys.collider_head = bx->pool_flag;
+        collider_sys.collider_head = col->pool_flag;
     }
 
     ++collider_sys.collider_len;
 
     // setup collider
-    memset(bx, 0, sizeof(collider));
-    bx->pool_flag = ALIVE_POOL_FLAG;
+    memset(col, 0, sizeof(collider));
+    col->pool_flag = ALIVE_POOL_FLAG;
 
-    log_debug("Created collider [%u]", idx);
+    log_debug("Created Collider [%u]", idx);
 
-    if (r_collider != nullptr) *r_collider = bx;
+    if (r_collider != nullptr) *r_collider = col;
     return idx;
 }
 
 void collider_destroy(u32 idx) {
-    collider *bx = &collider_sys.collider_pool[idx];
+    collider *col = &collider_sys.collider_pool[idx];
 
-    if (bx->pool_flag != ALIVE_POOL_FLAG) {
+    if (col->pool_flag != ALIVE_POOL_FLAG) {
         log_warn("collider_destroy(): collider already dead");
         return;
     }
 
-    bx->pool_flag = collider_sys.collider_head;
+    col->pool_flag = collider_sys.collider_head;
     collider_sys.collider_head = idx;
 
     --collider_sys.collider_len;
 
     // destroy from tree if is
-    if (bx->tree_node_idx != 0) {
-        collider_tree_remove(bx->tree_node_idx, true);
+    if (col->tree_node_idx != 0) {
+        collider_tree_remove(col->tree_node_idx, true);
     }
 
-    log_debug("Destroyed collider [%u]", idx);
+    log_debug("Destroyed Collider [%u]", idx);
 }
 
 [[nodiscard]] collider *collider_get(u32 idx) {
@@ -109,53 +109,53 @@ u32 collider_node_create(u32 collider_idx) {
     assert(collider_sys.tree_len < collider_sys.tree_cap);
 
     usize idx = collider_sys.tree_head;
-    collider_node *bn = &collider_sys.tree_pool[idx];
+    collider_node *col_node = &collider_sys.tree_pool[idx];
 
     if (idx == collider_sys.tree_max_idx) {
         ++collider_sys.tree_max_idx;
         ++collider_sys.tree_head;
     } else {
-        collider_sys.tree_head = bn->pool_flag;
+        collider_sys.tree_head = col_node->pool_flag;
     }
 
     ++collider_sys.tree_len;
 
-    memset(bn, 0, sizeof(collider_node));
-    bn->pool_flag = ALIVE_POOL_FLAG;
+    memset(col_node, 0, sizeof(collider_node));
+    col_node->pool_flag = ALIVE_POOL_FLAG;
 
     // collider_idx == 0 => no linking against any actual collider
     if (collider_idx != 0) {
-        collider *bx = collider_get(collider_idx);
-        bn->collider_idx = collider_idx;
-        bn->x = bx->x - collider_sys.fat_aabb_offset;
-        bn->y = bx->y - collider_sys.fat_aabb_offset;
-        bn->w = bx->w + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
-        bn->h = bx->h + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
-        bn->flag = bx->flag;
+        collider *col = collider_get(collider_idx);
+        col_node->collider_idx = collider_idx;
+        col_node->x = col->x - collider_sys.fat_aabb_offset;
+        col_node->y = col->y - collider_sys.fat_aabb_offset;
+        col_node->w = col->w + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
+        col_node->h = col->h + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
+        col_node->flag = col->flag;
     }
 
     return idx;
 }
 
 void collider_node_destroy(u32 idx) {
-    collider_node *bn = &collider_sys.tree_pool[idx];
-    assert(bn->pool_flag == ALIVE_POOL_FLAG);
+    collider_node *col_node = &collider_sys.tree_pool[idx];
+    assert(col_node->pool_flag == ALIVE_POOL_FLAG);
 
-    bn->pool_flag = collider_sys.tree_head;
+    col_node->pool_flag = collider_sys.tree_head;
     collider_sys.tree_head = idx;
 
     --collider_sys.tree_len;
 }
 
 void collider_node_update(u32 collider_idx) {
-    collider *bx = collider_get(collider_idx);
-    collider_node *bn = &collider_sys.tree_pool[bx->tree_node_idx];
-    bn->collider_idx = collider_idx;
-    bn->x = bx->x - collider_sys.fat_aabb_offset;
-    bn->y = bx->y - collider_sys.fat_aabb_offset;
-    bn->w = bx->w + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
-    bn->h = bx->h + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
-    bn->flag = bx->flag;
+    collider *col = collider_get(collider_idx);
+    collider_node *col_node = &collider_sys.tree_pool[col->tree_node_idx];
+    col_node->collider_idx = collider_idx;
+    col_node->x = col->x - collider_sys.fat_aabb_offset;
+    col_node->y = col->y - collider_sys.fat_aabb_offset;
+    col_node->w = col->w + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
+    col_node->h = col->h + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
+    col_node->flag = col->flag;
 }
 
 [[nodiscard]] collider_node *collider_node_get(u32 idx) {
@@ -468,16 +468,16 @@ void collider_tree_remove(u32 node_idx, bool destroy_node) {
 // =============================================================================
 void collider_sys_update() {
     for (usize i = 1; i < collider_sys.collider_max_idx; ++i) {
-        collider *bx = collider_get(i);
-        if (bx->pool_flag != ALIVE_POOL_FLAG) continue;
+        collider *col = collider_get(i);
+        if (col->pool_flag != ALIVE_POOL_FLAG) continue;
 
-        if (bx->tree_node_idx != 0) {
-            collider_node *bn = collider_node_get(bx->tree_node_idx);
-            if (bx->x < bn->x
-                || bx->y < bn->y
-                || bx->x + bx->w > bn->x + bn->w
-                || bx->y + bx->h > bn->y + bn->h) {
-                collider_tree_remove(bx->tree_node_idx, false);
+        if (col->tree_node_idx != 0) {
+            collider_node *col_node = collider_node_get(col->tree_node_idx);
+            if (col->x < col_node->x
+                || col->y < col_node->y
+                || col->x + col->w > col_node->x + col_node->w
+                || col->y + col->h > col_node->y + col_node->h) {
+                collider_tree_remove(col->tree_node_idx, false);
                 collider_tree_insert(i, false);
             }
         }
@@ -486,7 +486,6 @@ void collider_sys_update() {
 
 void collider_sys_draw_node_debug(u32 node_idx, u32 max_height) {
     collider_node *node;
-    float inset;
     Rectangle rect;
     Color color;
 
@@ -498,14 +497,12 @@ void collider_sys_draw_node_debug(u32 node_idx, u32 max_height) {
     color.r = 255;
     color.g = 200;
     color.b = 200;
-    color.a = 255;
+    color.a = 50;
 
-    inset = (float)(max_height - node->height) * 2.0f;
-
-    rect.x = node->x + inset;
-    rect.y = node->y + inset;
-    rect.width = node->w - (inset * 2.0f);
-    rect.height = node->h - (inset * 2.0f);
+    rect.x = node->x;
+    rect.y = node->y;
+    rect.width = node->w;
+    rect.height = node->h;
 
     if (rect.width < 1.0f)  rect.width = 1.0f;
     if (rect.height < 1.0f) rect.height = 1.0f;
@@ -513,11 +510,11 @@ void collider_sys_draw_node_debug(u32 node_idx, u32 max_height) {
     DrawRectangleLinesEx(rect, 1.0f, color);
 
     if (node->collider_idx != 0) {
-        collider *bx = collider_get(node->collider_idx);
-        rect.x = bx->x;
-        rect.y = bx->y;
-        rect.width = bx->w;
-        rect.height = bx->h;
+        collider *col = collider_get(node->collider_idx);
+        rect.x = col->x;
+        rect.y = col->y;
+        rect.width = col->w;
+        rect.height = col->h;
         DrawRectangleLinesEx(rect, 2.0f, GREEN);
     }
 

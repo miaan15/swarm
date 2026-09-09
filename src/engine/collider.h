@@ -5,8 +5,7 @@
 typedef struct {
     u32 pool_flag;
 
-    f32 x, y; // become offset to entity of entity_idx != 0
-    f32 w, h;
+    f32 x, y, w, h;
 
     u8 flag;
 
@@ -15,6 +14,7 @@ typedef struct {
     // for entity stuff
     u32 entity_idx;
     u32 next;
+    f32 offset_x, offset_y;
 } collider;
 
 typedef struct {

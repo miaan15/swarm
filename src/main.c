@@ -9,7 +9,7 @@ int main(void)
 
     InitWindow(screenWidth, screenHeight, "swarm");
 
-    SetTargetFPS(60);
+    // SetTargetFPS(60);
 
     engine_init();
 

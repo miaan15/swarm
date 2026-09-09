@@ -7,10 +7,10 @@
 struct sprite_sys sprite_sys = {0};
 
 // =============================================================================
-void sprite_sys_init(usize prf_cap, usize sprite_cap) {
+void sprite_sys_init(usize profile_cap, usize sprite_cap) {
     // profiles
-    sprite_sys.prf_arr = arena_alloc(&omni_arena, prf_cap * sizeof(sprite_prf));
-    sprite_sys.prf_cap = prf_cap;
+    sprite_sys.prf_arr = arena_alloc(&omni_arena, profile_cap * sizeof(sprite_profile));
+    sprite_sys.prf_cap = profile_cap;
 
     // sprites
     sprite_sys.sprite_pool = arena_alloc(&omni_arena, sprite_cap * sizeof(sprite));
@@ -25,20 +25,20 @@ void sprite_sys_init(usize prf_cap, usize sprite_cap) {
 }
 
 // =============================================================================
-u32 sprite_prf_make(u32 tex, f32 x, f32 y, f32 w, f32 h) {
-    sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_prf){tex, x, y, w, h};
+u32 sprite_profile_make(u32 tex, f32 x, f32 y, f32 w, f32 h) {
+    sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_profile){tex, x, y, w, h};
 
     log_debug("Made SpriteProfile [%u]: Texture = [%u]; x = %.0f; y = %.0f; w = %.0f; h = %.0f", sprite_sys.prf_len, tex, x, y, w, h);
 
     return sprite_sys.prf_len++;
 }
 
-sprite_prf sprite_prf_get(usize idx) {
+sprite_profile sprite_profile_get(usize idx) {
     return sprite_sys.prf_arr[idx];
 }
 
 // =============================================================================
-u32 sprite_create(u32 prf_idx, sprite **r_sprite) {
+u32 sprite_create(u32 profile_idx, sprite **r_sprite) {
     if (sprite_sys.len >= sprite_sys.cap) {
         log_err("sprite_create(): too much sprites => stub");
         return 0;
@@ -59,9 +59,9 @@ u32 sprite_create(u32 prf_idx, sprite **r_sprite) {
     // setup sprite
     memset(spr, 0, sizeof(sprite));
     spr->pool_flag = ALIVE_POOL_FLAG;
-    spr->prf_idx = prf_idx;
+    spr->profile_idx = profile_idx;
 
-    log_debug("Created Sprite [%u]: SpriteProfile = [%u]", idx, prf_idx);
+    log_debug("Created Sprite [%u]: SpriteProfile = [%u]", idx, profile_idx);
 
     if (r_sprite != nullptr) *r_sprite = spr;
     return idx;
@@ -98,7 +98,7 @@ void sprite_sys_draw() {
         sprite spr = sprite_sys.sprite_pool[i];
         if (spr.pool_flag != ALIVE_POOL_FLAG) continue;
 
-        sprite_prf spr_prf = sprite_prf_get(spr.prf_idx);
+        sprite_profile spr_prf = sprite_profile_get(spr.profile_idx);
 
         // setup drawer
         drawer *drr = draw_make();
