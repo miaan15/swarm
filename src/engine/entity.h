@@ -21,8 +21,10 @@ struct entity_sys {
 };
 extern struct entity_sys entity_sys;
 
+// =============================================================================
 void entity_sys_init(usize cap);
 
+// =============================================================================
 u32 entity_create();
 void entity_destroy(u32 idx);
 

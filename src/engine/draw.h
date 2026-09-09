@@ -12,6 +12,7 @@ typedef struct {
     f32 dx, dy, dw, dh;
 } drawer;
 
+// draw_sys contains both texture (wrapper of raylib Texture2D) and drawer (draw call instance in a frame)
 struct draw_sys {
     void *tex_arr;
     usize tex_cap;
@@ -21,13 +22,15 @@ struct draw_sys {
     usize drawer_cap;
     usize drawer_len;
 };
-
 extern struct draw_sys draw_sys;
 
-void draw_init(usize texture_cap, usize drawer_cap);
+// =============================================================================
+void draw_sys_init(usize texture_cap, usize drawer_cap);
 
+// =============================================================================
 u32 texture_load(const char *path);
 
+// =============================================================================
 drawer *draw_make();
 
 void draw_meta_set_z(u64 *meta, i8 z);

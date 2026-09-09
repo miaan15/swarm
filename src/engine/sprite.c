@@ -6,10 +6,13 @@
 
 struct sprite_sys sprite_sys = {0};
 
+// =============================================================================
 void sprite_sys_init(usize prf_cap, usize sprite_cap) {
+    // profiles
     sprite_sys.prf_arr = arena_alloc(&omni_arena, prf_cap * sizeof(sprite_prf));
     sprite_sys.prf_cap = prf_cap;
 
+    // sprites
     sprite_sys.sprite_pool = arena_alloc(&omni_arena, sprite_cap * sizeof(sprite));
     sprite_sys.cap = sprite_cap;
 
@@ -21,6 +24,7 @@ void sprite_sys_init(usize prf_cap, usize sprite_cap) {
     // TODO assign stub sprite
 }
 
+// =============================================================================
 u32 sprite_prf_make(u32 tex, f32 x, f32 y, f32 w, f32 h) {
     sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_prf){tex, x, y, w, h};
 
@@ -33,6 +37,7 @@ sprite_prf sprite_prf_get(usize idx) {
     return sprite_sys.prf_arr[idx];
 }
 
+// =============================================================================
 u32 sprite_create(u32 prf_idx) {
     if (sprite_sys.len >= sprite_sys.cap) {
         log_err("sprite_create(): too much sprites => stub");
@@ -51,6 +56,7 @@ u32 sprite_create(u32 prf_idx) {
 
     ++sprite_sys.len;
 
+    // setup sprite
     memset(spr, 0, sizeof(sprite));
     spr->pool_flag = ALIVE_POOL_FLAG;
     spr->prf_idx = prf_idx;
@@ -61,6 +67,7 @@ u32 sprite_create(u32 prf_idx) {
 }
 
 void sprite_destroy(u32 idx) {
+    // only remove from pool
     sprite *spr = &sprite_sys.sprite_pool[idx];
 
     if (spr->pool_flag != ALIVE_POOL_FLAG) {
@@ -84,13 +91,15 @@ sprite *sprite_get(usize idx) {
     return &sprite_sys.sprite_pool[idx];
 }
 
-void sprite_draw() {
+// =============================================================================
+void sprite_sys_draw() {
     for (usize i = 1; i < sprite_sys.max_idx; ++i) {
         sprite spr = sprite_sys.sprite_pool[i];
         if (spr.pool_flag != ALIVE_POOL_FLAG) continue;
 
         sprite_prf spr_prf = sprite_prf_get(spr.prf_idx);
 
+        // setup drawer
         drawer *drr = draw_make();
         drr->tex = spr_prf.tex;
         memcpy(&drr->sx, &spr_prf.x, 4 * sizeof(f32));
@@ -99,5 +108,6 @@ void sprite_draw() {
         drr->dw = spr_prf.w;
         drr->dh = spr_prf.h;
         draw_meta_set_y(&drr->meta, drr->dy);
+        draw_meta_set_z(&drr->meta, spr.z);
     }
 }

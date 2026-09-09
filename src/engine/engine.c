@@ -1,12 +1,13 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "box.h"
 #include "context.h"
 #include "entity.h"
 #include "draw.h"
 #include "sprite.h"
 
-#define SPRITE_COUNT 100
+#define SPRITE_COUNT 1000
 
 #define BOX_MIN_X 0 + 10
 #define BOX_MAX_X 1280 - 10
@@ -29,7 +30,7 @@ static inline f32 rand_f32(f32 min, f32 max) {
 void engine_init() {
     arena_init(&omni_arena, 100 << 10 << 10); // 100MB
 
-    draw_init(99999, 99999);
+    draw_sys_init(99999, 99999);
     sprite_sys_init(99999, 99999);
     entity_sys_init(2048);
 
@@ -80,6 +81,11 @@ void engine_update() {
             spr_vel[i].vy = -spr_vel[i].vy;
         }
     }
+
+    {
+        // TODO debug
+    }
+    box_sys_update();
 }
 
 void engine_input() {
@@ -87,9 +93,11 @@ void engine_input() {
 }
 
 void engine_draw() {
-    sprite_draw();
+    sprite_sys_draw();
 
     draw_present();
+
+    box_sys_draw_debug(1);
 }
 
 void engine_destroy() {

@@ -7,6 +7,7 @@
 
 struct entity_sys entity_sys = {0};
 
+// =============================================================================
 void entity_sys_init(usize cap) {
     entity_sys.entity_pool = arena_alloc(&omni_arena, cap * sizeof(entity));
     entity_sys.cap = cap;
@@ -16,6 +17,7 @@ void entity_sys_init(usize cap) {
     entity_sys.head = entity_sys.max_idx = entity_sys.len = 1;
 }
 
+// =============================================================================
 u32 entity_create() {
     if (entity_sys.len >= entity_sys.cap) {
         log_err("entity_create(): too much entities => stub");
@@ -34,6 +36,7 @@ u32 entity_create() {
 
     ++entity_sys.len;
 
+    // setup entity
     memset(ett, 0, sizeof(entity));
     ett->pool_flag = ALIVE_POOL_FLAG;
 
@@ -55,6 +58,7 @@ void entity_destroy(u32 idx) {
 
     --entity_sys.len;
 
+    // need to destroy "belongings"
     // destroy all sprites
     for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
         sprite *spr = sprite_get(sprite_idx);
