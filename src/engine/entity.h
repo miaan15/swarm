@@ -25,7 +25,7 @@ extern struct entity_sys entity_sys;
 void entity_sys_init(usize cap);
 
 // =============================================================================
-u32 entity_create();
+u32 entity_create(entity **r_entity);
 void entity_destroy(u32 idx);
 
 [[nodiscard]] entity *entity_get(usize idx);

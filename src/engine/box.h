@@ -55,7 +55,7 @@ extern struct box_sys box_sys;
 void box_sys_init(usize cap);
 
 // =============================================================================
-u32 box_create();
+u32 box_create(box **r_box);
 void box_destroy(u32 idx);
 
 [[nodiscard]] box *box_get(u32 idx);
@@ -65,4 +65,4 @@ void box_add_tree(u32 idx);
 // =============================================================================
 void box_sys_update();
 
-void box_sys_draw_debug(bool draw_all_tree);
+void box_sys_draw_debug();

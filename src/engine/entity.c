@@ -18,7 +18,7 @@ void entity_sys_init(usize cap) {
 }
 
 // =============================================================================
-u32 entity_create() {
+u32 entity_create(entity **r_entity) {
     if (entity_sys.len >= entity_sys.cap) {
         log_err("entity_create(): too much entities => stub");
         return 0;
@@ -42,6 +42,7 @@ u32 entity_create() {
 
     log_debug("Created Entity [%u]", idx);
 
+    if (r_entity != nullptr) *r_entity = ett;
     return idx;
 }
 

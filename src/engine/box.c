@@ -4,6 +4,7 @@
 #include "log.h"
 #include <assert.h>
 #include <math.h>
+#include <raylib.h>
 
 struct box_sys box_sys = {0};
 
@@ -27,9 +28,9 @@ void box_sys_init(usize cap) {
 }
 
 // =============================================================================
-u32 box_create() {
+u32 box_create(box **r_box) {
     if (box_sys.box_len >= box_sys.box_cap) {
-        log_err("box_create(): too much boxs => stub");
+        log_err("box_create(): too much boxess => stub");
         return 0;
     }
 
@@ -51,6 +52,7 @@ u32 box_create() {
 
     log_debug("Created Box [%u]", idx);
 
+    if (r_box != nullptr) *r_box = bx;
     return idx;
 }
 
@@ -260,33 +262,42 @@ void box_tree_insert(u32 box_idx) {
     // common parent node of insert_node and cur_node
     u32 par_idx = box_node_create(0);
     box_node *par_node = box_node_get(par_idx);
+    box_node *cur_node = box_node_get(cur_idx);
+
+    u32 old_curpar_idx = cur_node->parent;
+
+    par_node->child[0] = insert_idx;
+    insert_node->parent = par_idx;
+    
+    par_node->child[1] = cur_idx;
+    cur_node->parent    = par_idx;
+
+    par_node->parent   = old_curpar_idx;
+    par_node->height   = cur_node->height + 1;
 
     //
-    par_node->child[0] = insert_idx;
-    par_node->child[1] = cur_idx;
-    insert_node->parent = par_idx;
+    if (cur_idx == box_sys.tree_root) box_sys.tree_root = par_idx;
+    else {
+        // rewire parent of parent
+        box_node *old_curpar_node = box_node_get(old_curpar_idx);
+        if (old_curpar_node->child[0] == cur_idx) {
+            old_curpar_node->child[0] = par_idx;
+        } else {
+            old_curpar_node->child[1] = par_idx;
+        }
 
-    box_node *cur_node = box_node_get(cur_idx);
-    cur_node->parent = par_idx;
-
-    par_node->height = cur_node->height + 1;
-
-    // rewire parent of parent
-    box_node *curpar_node = box_node_get(cur_node->parent);
-    if (curpar_node->child[0] == cur_idx) { curpar_node->child[0] = par_idx; }
-    else                                  { curpar_node->child[1] = par_idx; }
-
-    curpar_node->height = par_node->height + 1 > curpar_node->height
-                          ? par_node->height + 1
-                          : curpar_node->height;
+        if (par_node->height + 1 > old_curpar_node->height) {
+            old_curpar_node->height = par_node->height + 1;
+        }
+    }
 
     // update parents' aabb upward
     u32 update_idx = insert_node->parent;
-    do {
+    while (update_idx != 0) {
         box_node *update_node = box_node_get(update_idx);
         box_merge_node(update_idx, update_node->child[0], update_node->child[1]);
         update_idx = update_node->parent;
-    } while (update_idx != box_sys.tree_root);
+    }
 }
 
 // =============================================================================
@@ -297,6 +308,55 @@ void box_sys_update() {
     box_sys.tree_root = 0;
 }
 
-void box_sys_draw_debug(bool draw_all_tree) {
+void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
+    box_node *node;
+    float t;
+    float inset;
+    Rectangle rect;
+    Color color;
 
+    if (node_idx == 0) return;
+
+    node = box_node_get(node_idx);
+    if (!node) return;
+
+    t = 0.0f;
+    if (max_height > 0) {
+        t = 1.0f - ((float)node->height / (float)max_height);
+    }
+
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+
+    color.r = (unsigned char)(255.0f * t);
+    color.g = (unsigned char)(255.0f * (1.0f - t));
+    color.b = 0;
+    color.a = 255;
+
+    inset = (float)(max_height - node->height) * 2.0f;
+
+    rect.x = node->x + inset;
+    rect.y = node->y + inset;
+    rect.width = node->w - (inset * 2.0f);
+    rect.height = node->h - (inset * 2.0f);
+
+    if (rect.width < 1.0f)  rect.width = 1.0f;
+    if (rect.height < 1.0f) rect.height = 1.0f;
+
+    DrawRectangleLinesEx(rect, 1.0f, color);
+
+    box_sys_draw_node_debug(node->child[0], max_height);
+    box_sys_draw_node_debug(node->child[1], max_height);
+}
+
+void box_sys_draw_debug(void) {
+    if (box_sys.tree_root == 0) return;
+
+    box_node *root = box_node_get(box_sys.tree_root);
+    if (!root) return;
+
+    // The root node's height represents the maximum depth of the tree
+    u32 max_height = root->height;
+
+    box_sys_draw_node_debug(box_sys.tree_root, max_height);
 }

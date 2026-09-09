@@ -5,9 +5,10 @@
 #include "context.h"
 #include "entity.h"
 #include "draw.h"
+#include "raylib.h"
 #include "sprite.h"
 
-#define SPRITE_COUNT 1000
+#define SPRITE_COUNT 0
 
 #define BOX_MIN_X 0 + 10
 #define BOX_MAX_X 1280 - 10
@@ -32,6 +33,7 @@ void engine_init() {
 
     draw_sys_init(99999, 99999);
     sprite_sys_init(99999, 99999);
+    box_sys_init(99999);
     entity_sys_init(2048);
 
     texture_load("img/char_00.png");
@@ -41,8 +43,8 @@ void engine_init() {
     sprite_prf_make(1, 0, 60, 20, 20); // 4
 
     for (u32 i = 1; i <= SPRITE_COUNT; ++i) {
-        sprite_create(i);
-        sprite *spr = sprite_get(i);
+        sprite *spr;
+        sprite_create(i, &spr);
 
         spr->prf_idx = (rand() % 4) + 1;
         sprite_prf prf = sprite_prf_get(spr->prf_idx);
@@ -82,10 +84,28 @@ void engine_update() {
         }
     }
 
+    box_sys_update();
     {
         // TODO debug
+        constexpr usize CNT = 6;
+        f32 aabb[CNT][4] = { 
+            {100, 100, 100, 300},
+            {200, 200, 300, 100},
+            {520, 270, 250, 200},
+            {600, 230, 200, 80},
+            {900, 300, 50, 50},
+        };
+        aabb[5][0] = GetMouseX();
+        aabb[5][1] = GetMouseY();
+        aabb[5][2] = 100; aabb[5][3] = 100;
+
+        for (usize i = 0; i < CNT; ++i) {
+            box *box;
+            u32 idx = box_create(&box);
+            memcpy(&box->x, &aabb[i], 4 * sizeof(f32));
+            box_add_tree(idx);
+        }
     }
-    box_sys_update();
 }
 
 void engine_input() {
@@ -97,7 +117,7 @@ void engine_draw() {
 
     draw_present();
 
-    box_sys_draw_debug(1);
+    box_sys_draw_debug();
 }
 
 void engine_destroy() {

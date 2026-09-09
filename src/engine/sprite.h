@@ -40,7 +40,7 @@ u32 sprite_prf_make(u32 tex, f32 x, f32 y, f32 w, f32 h);
 [[nodiscard]] sprite_prf sprite_prf_get(usize idx);
 
 // =============================================================================
-u32 sprite_create(u32 prf_idx);
+u32 sprite_create(u32 prf_idx, sprite **r_sprite);
 void sprite_destroy(u32 idx);
 
 [[nodiscard]] sprite *sprite_get(usize idx);

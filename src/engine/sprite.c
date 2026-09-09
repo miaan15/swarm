@@ -38,7 +38,7 @@ sprite_prf sprite_prf_get(usize idx) {
 }
 
 // =============================================================================
-u32 sprite_create(u32 prf_idx) {
+u32 sprite_create(u32 prf_idx, sprite **r_sprite) {
     if (sprite_sys.len >= sprite_sys.cap) {
         log_err("sprite_create(): too much sprites => stub");
         return 0;
@@ -63,6 +63,7 @@ u32 sprite_create(u32 prf_idx) {
 
     log_debug("Created Sprite [%u]: SpriteProfile = [%u]", idx, prf_idx);
 
+    if (r_sprite != nullptr) *r_sprite = spr;
     return idx;
 }
 
