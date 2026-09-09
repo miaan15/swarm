@@ -10,7 +10,7 @@ typedef struct {
 
     u8 flag;
 
-    u32 tree_node;
+    u32 tree_node_idx;
 
     // for entity stuff
     u32 entity_idx;
@@ -21,7 +21,7 @@ typedef struct {
     u32 pool_flag;
 
     u32 box_idx;
-    
+
     u32 parent;
     u32 child[2];
     u32 height;
@@ -60,7 +60,7 @@ void box_destroy(u32 idx);
 
 [[nodiscard]] box *box_get(u32 idx);
 
-void box_add_tree(u32 idx);
+void box_add_to_tree(u32 idx);
 
 // =============================================================================
 void box_sys_update();

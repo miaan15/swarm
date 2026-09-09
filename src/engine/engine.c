@@ -28,6 +28,7 @@ static inline f32 rand_f32(f32 min, f32 max) {
     return min + ((f32)rand() / (f32)RAND_MAX) * (max - min);
 }
 
+u32 mouse_box_idx;
 void engine_init() {
     arena_init(&omni_arena, 100 << 10 << 10); // 100MB
 
@@ -57,6 +58,30 @@ void engine_init() {
         spr_vel[i].vx = cosf(angle) * speed;
         spr_vel[i].vy = sinf(angle) * speed;
     }
+
+    // TODO debug
+    constexpr usize CNT = 5;
+    f32 aabb[CNT][4] = { 
+        {100, 100, 100, 300},
+        {200, 200, 300, 100},
+        {520, 270, 250, 200},
+        {600, 230, 200, 80},
+        {900, 300, 50, 50},
+    };
+    for (usize i = 0; i < CNT; ++i) {
+        box *bx;
+        u32 idx = box_create(&bx);
+        memcpy(&bx->x, &aabb[i], 4 * sizeof(f32));
+        box_add_to_tree(idx);
+    }
+
+    {
+        box *bx;
+        mouse_box_idx = box_create(&bx);
+        bx->w = 100;
+        bx->h = 100;
+        box_add_to_tree(mouse_box_idx);
+    }
 }
 
 void engine_update() {
@@ -84,28 +109,12 @@ void engine_update() {
         }
     }
 
-    box_sys_update();
     {
-        // TODO debug
-        constexpr usize CNT = 6;
-        f32 aabb[CNT][4] = { 
-            {100, 100, 100, 300},
-            {200, 200, 300, 100},
-            {520, 270, 250, 200},
-            {600, 230, 200, 80},
-            {900, 300, 50, 50},
-        };
-        aabb[5][0] = GetMouseX();
-        aabb[5][1] = GetMouseY();
-        aabb[5][2] = 100; aabb[5][3] = 100;
-
-        for (usize i = 0; i < CNT; ++i) {
-            box *box;
-            u32 idx = box_create(&box);
-            memcpy(&box->x, &aabb[i], 4 * sizeof(f32));
-            box_add_tree(idx);
-        }
+        box *bx = box_get(mouse_box_idx);
+        bx->x = GetMouseX();
+        bx->y = GetMouseY();
     }
+    box_sys_update();
 }
 
 void engine_input() {
