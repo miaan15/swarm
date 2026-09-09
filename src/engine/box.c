@@ -98,7 +98,7 @@ void box_add_to_tree(u32 idx) {
     }
 
     box_get(idx)->tree_node_idx = box_tree_insert(idx, true);
-    log_info(">>>>> %u", box_get(idx)->tree_node_idx);
+    // log_info(">>>>> %u", box_get(idx)->tree_node_idx);
 }
 
 // =============================================================================
@@ -117,7 +117,7 @@ u32 box_node_create(u32 box_idx) {
 
     ++box_sys.tree_len;
 
-    memset(bn, 0, sizeof(box));
+    memset(bn, 0, sizeof(box_node));
     bn->pool_flag = ALIVE_POOL_FLAG;
 
     // box_idx == 0 => no linking against any actual box
@@ -255,9 +255,7 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
 
         u32 child_idx[2] = { cur_node->child[0], cur_node->child[1] };
 
-        box_node *child_node[2];
-        child_node[0] = box_node_get(child_idx[0]);
-        child_node[1] = box_node_get(child_idx[1]);
+        box_node *child_node[2] = { box_node_get(child_idx[0]), box_node_get(child_idx[1]) };
 
         // cost to compare to decide wheter goes does or what (math stuff)
         f32 cur_cost = cur_node->w * cur_node->h;
@@ -273,6 +271,9 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
 
         if (cur_cost < child_cost[min_i]) break;
 
+        // other heuristic: use perimeter?, idk, maybe it's better?
+        min_i = child_node[0]->w + child_node[0]->h < child_node[1]->w + child_node[1]->h ? 0 : 1;
+
         // rebalance tree
         // instead of rotate tree in normal way, just re-wire stuff to retain the aabb data
         if (cur_idx != box_sys.tree_root
@@ -285,17 +286,22 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
             usize cur_child_i = curpar_node->child[0] == cur_idx ? 0 : 1;
             usize _cur_sib_idx = curpar_node->child[1 - cur_child_i];
 
-            curpar_node->child[0] = cur_idx;
+            //
+            usize cur_i = curpar_node->child[0] == cur_idx ? 0 : 1;
+            curpar_node->child[cur_i] = cur_idx;
             cur_node->parent = curpar_idx;
 
-            curpar_node->child[1] = child_idx[min_i];
+            curpar_node->child[1 - cur_i] = child_idx[min_i];
             child_node[min_i]->parent = curpar_idx;
 
-            cur_node->child[0] = _cur_sib_idx;
+            //
+            usize child_min_i = 1 - min_i;
+            cur_node->child[child_min_i] = child_idx[1 - min_i];
+            child_node[1 - min_i]->parent = cur_idx;
+
+            cur_node->child[1 - child_min_i] = _cur_sib_idx;
             box_node_get(_cur_sib_idx)->parent = cur_idx;
 
-            cur_node->child[1] = child_idx[1 - min_i];
-            child_node[1 - min_i]->parent = cur_idx;
 
             // remerge some aabb, height
             box_node_recal_aabb_height(cur_idx);
@@ -323,6 +329,7 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
 
     if (parpar_idx == 0) { // par_node is new tree_root
         box_sys.tree_root = par_idx;
+        par_node->parent = 0;
     }
     else {
         // rewire parent of parent
@@ -345,9 +352,9 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
         ud_idx = box_node_get(ud_idx)->parent;
     }
 
-    log_info("tree after INSERT node[%u]", insert_idx);
-    debug_print_box_tree();
-    printf("\n");
+    // log_info("tree after INSERT node[%u]", insert_idx);
+    // debug_print_box_tree();
+    // printf("\n");
 
     return insert_idx;
 }
@@ -375,6 +382,8 @@ void box_tree_remove(u32 node_idx, bool destroy_node) {
             box_sys.tree_root = par_node->child[0] != node_idx
                                 ? par_node->child[0]
                                 : par_node->child[1];
+            box_node_get(box_sys.tree_root)->parent = 0;
+
             box_node_destroy(node_idx);
             box_node_destroy(par_idx);
             return;
@@ -428,16 +437,20 @@ void box_tree_remove(u32 node_idx, bool destroy_node) {
                                                  box_node_get(_cur_sib_child_idx[1]) };
             u32 cur_sib_child_max_i = _cur_sib_child_node[0]->height > _cur_sib_child_node[1]->height ? 0 : 1;
 
-            curpar_node->child[0] = _cur_sib_child_idx[cur_sib_child_max_i];
-            _cur_sib_child_node[cur_sib_child_max_i]->parent = curpar_idx;
-
-            curpar_node->child[1] = cur_sib_idx;
+            //
+            usize cur_sib_i = curpar_node->child[0] == cur_sib_idx ? 0 : 1;
+            curpar_node->child[cur_sib_i] = cur_sib_idx;
             cur_sib_node->parent = curpar_idx;
 
-            cur_sib_node->child[0] = _cur_sib_child_idx[1 - cur_sib_child_max_i];
+            curpar_node->child[1 - cur_sib_i] = _cur_sib_child_idx[cur_sib_child_max_i];
+            _cur_sib_child_node[cur_sib_child_max_i]->parent = curpar_idx;
+
+            //
+            usize cur_sib_child_min_i = 1 - cur_sib_child_max_i;
+            cur_sib_node->child[cur_sib_child_min_i] = _cur_sib_child_idx[1 - cur_sib_child_max_i];
             _cur_sib_child_node[1 - cur_sib_child_max_i]->parent = cur_sib_idx;
 
-            cur_sib_node->child[1] = cur_idx;
+            cur_sib_node->child[1 - cur_sib_child_min_i] = cur_idx;
             cur_node->parent = cur_sib_idx;
 
             // remerge some aabb, height
@@ -452,9 +465,9 @@ void box_tree_remove(u32 node_idx, bool destroy_node) {
         }
     }
 
-    log_info("tree after REMOVE [%u]", node_idx);
-    debug_print_box_tree();
-    printf("\n");
+    // log_info("tree after REMOVE [%u]", node_idx);
+    // debug_print_box_tree();
+    // printf("\n");
 }
 
 // =============================================================================
@@ -522,7 +535,6 @@ void box_sys_draw_debug(void) {
 
     box_sys_draw_node_debug(box_sys.tree_root, max_height);
 }
-
 
 void print_box_tree_recursive(u32 idx, char *prefix, bool is_left, bool is_root) {
     if (idx == 0) return;
