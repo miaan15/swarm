@@ -2,7 +2,6 @@
 
 #include "context.h"
 #include "log.h"
-#include "sprite.h"
 #include <assert.h>
 
 struct entity_sys entity_sys = {0};
@@ -70,6 +69,16 @@ void entity_destroy(u32 idx) {
         sprite_idx = spr->next;
     }
 
+    // destroy all boxes
+    for (u32 box_idx = ett->box_begin; box_idx != 0;) {
+        box *bx = box_get(box_idx);
+        assert(bx->entity_idx == idx);
+
+        box_destroy(box_idx);
+
+        box_idx = bx->next;
+    }
+
     log_debug("Destroyed Entity [%u]", idx);
 }
 
@@ -79,4 +88,28 @@ entity *entity_get(usize idx) {
         return &entity_sys.entity_pool[0];
     }
     return &entity_sys.entity_pool[idx];
+}
+
+u32 entity_add_sprite(u32 idx, u32 prf_idx, sprite **r_sprite) {
+    u32 spr_idx = sprite_create(prf_idx, r_sprite);
+    
+    entity *ett = &entity_sys.entity_pool[idx];
+    (*r_sprite)->next = ett->sprite_begin;
+    ett->sprite_begin = spr_idx;
+
+    (*r_sprite)->entity_idx = idx;
+
+    return spr_idx;
+}
+
+u32 entity_add_box(u32 idx, box **r_box) {
+    u32 bx_idx = box_create(r_box);
+    
+    entity *ett = &entity_sys.entity_pool[idx];
+    (*r_box)->next = ett->box_begin;
+    ett->box_begin = bx_idx;
+
+    (*r_box)->entity_idx = idx;
+
+    return bx_idx;
 }
