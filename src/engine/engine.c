@@ -34,7 +34,7 @@ void engine_init() {
 
     draw_sys_init(99999, 99999);
     sprite_sys_init(99999, 99999);
-    box_sys_init(99999);
+    box_sys_init(99999, 50);
     entity_sys_init(2048);
 
     texture_load("img/char_00.png");

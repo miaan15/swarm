@@ -14,7 +14,7 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node);
 void box_tree_remove(u32 node_idx, bool destroy_node);
 
 // =============================================================================
-void box_sys_init(usize cap) {
+void box_sys_init(usize cap, f32 fat_box_offset) {
     // box pool
     box_sys.box_pool = arena_alloc(&omni_arena, cap * sizeof(box));
     box_sys.box_cap = cap;
@@ -22,6 +22,9 @@ void box_sys_init(usize cap) {
     // tree
     box_sys.tree_pool = arena_alloc(&omni_arena, (2 * cap) * sizeof(box_node));
     box_sys.tree_cap = 2 * cap;
+
+    //
+    box_sys.fat_box_offset = fat_box_offset;
 
     // stub
     box_sys.box_head = box_sys.box_max_idx = box_sys.box_len = 1;
@@ -124,10 +127,10 @@ u32 box_node_create(u32 box_idx) {
     if (box_idx != 0) {
         box *bx = box_get(box_idx);
         bn->box_idx = box_idx;
-        bn->x = bx->x - FAT_BOX_OFFSET;
-        bn->y = bx->y - FAT_BOX_OFFSET;
-        bn->w = bx->w + FAT_BOX_OFFSET + FAT_BOX_OFFSET;
-        bn->h = bx->h + FAT_BOX_OFFSET + FAT_BOX_OFFSET;
+        bn->x = bx->x - box_sys.fat_box_offset;
+        bn->y = bx->y - box_sys.fat_box_offset;
+        bn->w = bx->w + box_sys.fat_box_offset + box_sys.fat_box_offset;
+        bn->h = bx->h + box_sys.fat_box_offset + box_sys.fat_box_offset;
         bn->flag = bx->flag;
     }
 
@@ -148,10 +151,10 @@ void box_node_update(u32 box_idx) {
     box *bx = box_get(box_idx);
     box_node *bn = &box_sys.tree_pool[bx->tree_node_idx];
     bn->box_idx = box_idx;
-    bn->x = bx->x - FAT_BOX_OFFSET;
-    bn->y = bx->y - FAT_BOX_OFFSET;
-    bn->w = bx->w + FAT_BOX_OFFSET + FAT_BOX_OFFSET;
-    bn->h = bx->h + FAT_BOX_OFFSET + FAT_BOX_OFFSET;
+    bn->x = bx->x - box_sys.fat_box_offset;
+    bn->y = bx->y - box_sys.fat_box_offset;
+    bn->w = bx->w + box_sys.fat_box_offset + box_sys.fat_box_offset;
+    bn->h = bx->h + box_sys.fat_box_offset + box_sys.fat_box_offset;
     bn->flag = bx->flag;
 }
 
@@ -286,20 +289,16 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
             usize cur_child_i = curpar_node->child[0] == cur_idx ? 0 : 1;
             usize _cur_sib_idx = curpar_node->child[1 - cur_child_i];
 
-            //
-            usize cur_i = curpar_node->child[0] == cur_idx ? 0 : 1;
-            curpar_node->child[cur_i] = cur_idx;
+            curpar_node->child[0] = cur_idx;
             cur_node->parent = curpar_idx;
 
-            curpar_node->child[1 - cur_i] = child_idx[min_i];
+            curpar_node->child[1] = child_idx[min_i];
             child_node[min_i]->parent = curpar_idx;
 
-            //
-            usize child_min_i = 1 - min_i;
-            cur_node->child[child_min_i] = child_idx[1 - min_i];
+            cur_node->child[0] = child_idx[1 - min_i];
             child_node[1 - min_i]->parent = cur_idx;
 
-            cur_node->child[1 - child_min_i] = _cur_sib_idx;
+            cur_node->child[1] = _cur_sib_idx;
             box_node_get(_cur_sib_idx)->parent = cur_idx;
 
 
@@ -437,20 +436,16 @@ void box_tree_remove(u32 node_idx, bool destroy_node) {
                                                  box_node_get(_cur_sib_child_idx[1]) };
             u32 cur_sib_child_max_i = _cur_sib_child_node[0]->height > _cur_sib_child_node[1]->height ? 0 : 1;
 
-            //
-            usize cur_sib_i = curpar_node->child[0] == cur_sib_idx ? 0 : 1;
-            curpar_node->child[cur_sib_i] = cur_sib_idx;
+            curpar_node->child[0] = cur_sib_idx;
             cur_sib_node->parent = curpar_idx;
 
-            curpar_node->child[1 - cur_sib_i] = _cur_sib_child_idx[cur_sib_child_max_i];
+            curpar_node->child[1] = _cur_sib_child_idx[cur_sib_child_max_i];
             _cur_sib_child_node[cur_sib_child_max_i]->parent = curpar_idx;
 
-            //
-            usize cur_sib_child_min_i = 1 - cur_sib_child_max_i;
-            cur_sib_node->child[cur_sib_child_min_i] = _cur_sib_child_idx[1 - cur_sib_child_max_i];
+            cur_sib_node->child[0] = _cur_sib_child_idx[1 - cur_sib_child_max_i];
             _cur_sib_child_node[1 - cur_sib_child_max_i]->parent = cur_sib_idx;
 
-            cur_sib_node->child[1 - cur_sib_child_min_i] = cur_idx;
+            cur_sib_node->child[1] = cur_idx;
             cur_node->parent = cur_sib_idx;
 
             // remerge some aabb, height
@@ -477,15 +472,20 @@ void box_sys_update() {
         if (bx->pool_flag != ALIVE_POOL_FLAG) continue;
 
         if (bx->tree_node_idx != 0) {
-            box_tree_remove(bx->tree_node_idx, false);
-            box_tree_insert(i, false);
+            box_node *bn = box_node_get(bx->tree_node_idx);
+            if (bx->x < bn->x
+                || bx->y < bn->y
+                || bx->x + bx->w > bn->x + bn->w
+                || bx->y + bx->h > bn->y + bn->h) {
+                box_tree_remove(bx->tree_node_idx, false);
+                box_tree_insert(i, false);
+            }
         }
     }
 }
 
 void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
     box_node *node;
-    float t;
     float inset;
     Rectangle rect;
     Color color;
@@ -495,17 +495,9 @@ void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
     node = box_node_get(node_idx);
     if (!node) return;
 
-    t = 0.0f;
-    if (max_height > 0) {
-        t = 1.0f - ((float)node->height / (float)max_height);
-    }
-
-    if (t < 0.0f) t = 0.0f;
-    if (t > 1.0f) t = 1.0f;
-
-    color.r = (unsigned char)(255.0f * t);
-    color.g = (unsigned char)(255.0f * (1.0f - t));
-    color.b = 0;
+    color.r = 255;
+    color.g = 200;
+    color.b = 200;
     color.a = 255;
 
     inset = (float)(max_height - node->height) * 2.0f;
@@ -519,6 +511,15 @@ void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
     if (rect.height < 1.0f) rect.height = 1.0f;
 
     DrawRectangleLinesEx(rect, 1.0f, color);
+
+    if (node->box_idx != 0) {
+        box *bx = box_get(node->box_idx);
+        rect.x = bx->x;
+        rect.y = bx->y;
+        rect.width = bx->w;
+        rect.height = bx->h;
+        DrawRectangleLinesEx(rect, 2.0f, GREEN);
+    }
 
     box_sys_draw_node_debug(node->child[0], max_height);
     box_sys_draw_node_debug(node->child[1], max_height);

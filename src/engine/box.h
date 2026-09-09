@@ -31,7 +31,6 @@ typedef struct {
     u8 flag;
 } box_node;
 
-#define FAT_BOX_OFFSET 5
 struct box_sys {
     // box pool
     box *box_pool;
@@ -48,11 +47,13 @@ struct box_sys {
     u32 tree_len;
 
     u32 tree_root;
+
+    f32 fat_box_offset;
 };
 extern struct box_sys box_sys;
 
 // =============================================================================
-void box_sys_init(usize cap);
+void box_sys_init(usize cap, f32 fat_box_offset);
 
 // =============================================================================
 u32 box_create(box **r_box);
