@@ -15,12 +15,12 @@ typedef struct {
     // for entity stuff
     u32 entity_idx;
     u32 next;
-} box;
+} collider;
 
 typedef struct {
     u32 pool_flag;
 
-    u32 box_idx;
+    u32 collider_idx;
 
     u32 parent;
     u32 child[2];
@@ -29,18 +29,18 @@ typedef struct {
     f32 x, y, w, h;
 
     u8 flag;
-} box_node;
+} collider_node;
 
-struct box_sys {
-    // box pool
-    box *box_pool;
-    usize box_cap;
-    usize box_head;
-    usize box_max_idx;
-    u32 box_len;
+struct collider_sys {
+    // collider pool
+    collider *collider_pool;
+    usize collider_cap;
+    usize collider_head;
+    usize collider_max_idx;
+    u32 collider_len;
 
     // tree
-    box_node *tree_pool;
+    collider_node *tree_pool;
     usize tree_cap;
     usize tree_head;
     usize tree_max_idx;
@@ -48,22 +48,22 @@ struct box_sys {
 
     u32 tree_root;
 
-    f32 fat_box_offset;
+    f32 fat_aabb_offset;
 };
-extern struct box_sys box_sys;
+extern struct collider_sys collider_sys;
 
 // =============================================================================
-void box_sys_init(usize cap, f32 fat_box_offset);
+void collider_sys_init(usize cap, f32 fat_aabb_offset);
 
 // =============================================================================
-u32 box_create(box **r_box);
-void box_destroy(u32 idx);
+u32 collider_create(collider **r_collider);
+void collider_destroy(u32 idx);
 
-[[nodiscard]] box *box_get(u32 idx);
+[[nodiscard]] collider *collider_get(u32 idx);
 
-void box_add_to_tree(u32 idx);
+void collider_add_to_tree(u32 idx);
 
 // =============================================================================
-void box_sys_update();
+void collider_sys_update();
 
-void box_sys_draw_debug();
+void collider_sys_draw_debug();

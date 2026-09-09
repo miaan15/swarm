@@ -69,14 +69,14 @@ void entity_destroy(u32 idx) {
         sprite_idx = spr->next;
     }
 
-    // destroy all boxes
-    for (u32 box_idx = ett->box_begin; box_idx != 0;) {
-        box *bx = box_get(box_idx);
+    // destroy all collideres
+    for (u32 collider_idx = ett->collider_begin; collider_idx != 0;) {
+        collider *bx = collider_get(collider_idx);
         assert(bx->entity_idx == idx);
 
-        box_destroy(box_idx);
+        collider_destroy(collider_idx);
 
-        box_idx = bx->next;
+        collider_idx = bx->next;
     }
 
     log_debug("Destroyed Entity [%u]", idx);
@@ -102,14 +102,14 @@ u32 entity_add_sprite(u32 idx, u32 prf_idx, sprite **r_sprite) {
     return spr_idx;
 }
 
-u32 entity_add_box(u32 idx, box **r_box) {
-    u32 bx_idx = box_create(r_box);
+u32 entity_add_collider(u32 idx, collider **r_collider) {
+    u32 bx_idx = collider_create(r_collider);
     
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_box)->next = ett->box_begin;
-    ett->box_begin = bx_idx;
+    (*r_collider)->next = ett->collider_begin;
+    ett->collider_begin = bx_idx;
 
-    (*r_box)->entity_idx = idx;
+    (*r_collider)->entity_idx = idx;
 
     return bx_idx;
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "box.h"
+#include "collider.h"
 #include "define.h"
 #include "sprite.h"
 #include <raymath.h>
@@ -13,8 +13,8 @@ typedef struct {
     u32 sprite_begin;
     u32 sprite_len;
 
-    u32 box_begin;
-    u32 box_len;
+    u32 collider_begin;
+    u32 collider_len;
 } entity;
 
 struct entity_sys {
@@ -36,4 +36,4 @@ void entity_destroy(u32 idx);
 [[nodiscard]] entity *entity_get(usize idx);
 
 u32 entity_add_sprite(u32 idx, u32 prf_idx, sprite **r_sprite);
-u32 entity_add_box(u32 idx, box **r_box);
+u32 entity_add_collider(u32 idx, collider **r_collider);

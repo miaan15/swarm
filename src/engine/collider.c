@@ -1,4 +1,4 @@
-#include "box.h"
+#include "collider.h"
 
 #include "context.h"
 #include "log.h"
@@ -6,174 +6,174 @@
 #include <math.h>
 #include <raylib.h>
 
-struct box_sys box_sys = {0};
+struct collider_sys collider_sys = {0};
 
-void debug_print_box_tree();
+void debug_print_collider_tree();
 // =============================================================================
-u32 box_tree_insert(u32 box_idx, bool create_new_node);
-void box_tree_remove(u32 node_idx, bool destroy_node);
+u32 collider_tree_insert(u32 collider_idx, bool create_new_node);
+void collider_tree_remove(u32 node_idx, bool destroy_node);
 
 // =============================================================================
-void box_sys_init(usize cap, f32 fat_box_offset) {
-    // box pool
-    box_sys.box_pool = arena_alloc(&omni_arena, cap * sizeof(box));
-    box_sys.box_cap = cap;
+void collider_sys_init(usize cap, f32 fat_aabb_offset) {
+    // collider pool
+    collider_sys.collider_pool = arena_alloc(&omni_arena, cap * sizeof(collider));
+    collider_sys.collider_cap = cap;
 
     // tree
-    box_sys.tree_pool = arena_alloc(&omni_arena, (2 * cap) * sizeof(box_node));
-    box_sys.tree_cap = 2 * cap;
+    collider_sys.tree_pool = arena_alloc(&omni_arena, (2 * cap) * sizeof(collider_node));
+    collider_sys.tree_cap = 2 * cap;
 
     //
-    box_sys.fat_box_offset = fat_box_offset;
+    collider_sys.fat_aabb_offset = fat_aabb_offset;
 
     // stub
-    box_sys.box_head = box_sys.box_max_idx = box_sys.box_len = 1;
+    collider_sys.collider_head = collider_sys.collider_max_idx = collider_sys.collider_len = 1;
 
-    box_sys.tree_head = box_sys.tree_max_idx = box_sys.tree_len = 1;
+    collider_sys.tree_head = collider_sys.tree_max_idx = collider_sys.tree_len = 1;
 }
 
 // =============================================================================
-u32 box_create(box **r_box) {
-    if (box_sys.box_len >= box_sys.box_cap) {
-        log_err("box_create(): too much boxess => stub");
+u32 collider_create(collider **r_collider) {
+    if (collider_sys.collider_len >= collider_sys.collider_cap) {
+        log_err("collider_create(): too much collideress => stub");
         return 0;
     }
 
-    usize idx = box_sys.box_head;
-    box *bx = &box_sys.box_pool[idx];
+    usize idx = collider_sys.collider_head;
+    collider *bx = &collider_sys.collider_pool[idx];
 
-    if (idx == box_sys.box_max_idx) {
-        ++box_sys.box_max_idx;
-        ++box_sys.box_head;
+    if (idx == collider_sys.collider_max_idx) {
+        ++collider_sys.collider_max_idx;
+        ++collider_sys.collider_head;
     } else {
-        box_sys.box_head = bx->pool_flag;
+        collider_sys.collider_head = bx->pool_flag;
     }
 
-    ++box_sys.box_len;
+    ++collider_sys.collider_len;
 
-    // setup box
-    memset(bx, 0, sizeof(box));
+    // setup collider
+    memset(bx, 0, sizeof(collider));
     bx->pool_flag = ALIVE_POOL_FLAG;
 
-    log_debug("Created Box [%u]", idx);
+    log_debug("Created collider [%u]", idx);
 
-    if (r_box != nullptr) *r_box = bx;
+    if (r_collider != nullptr) *r_collider = bx;
     return idx;
 }
 
-void box_destroy(u32 idx) {
-    box *bx = &box_sys.box_pool[idx];
+void collider_destroy(u32 idx) {
+    collider *bx = &collider_sys.collider_pool[idx];
 
     if (bx->pool_flag != ALIVE_POOL_FLAG) {
-        log_warn("box_destroy(): box already dead");
+        log_warn("collider_destroy(): collider already dead");
         return;
     }
 
-    bx->pool_flag = box_sys.box_head;
-    box_sys.box_head = idx;
+    bx->pool_flag = collider_sys.collider_head;
+    collider_sys.collider_head = idx;
 
-    --box_sys.box_len;
+    --collider_sys.collider_len;
 
     // destroy from tree if is
     if (bx->tree_node_idx != 0) {
-        box_tree_remove(bx->tree_node_idx, true);
+        collider_tree_remove(bx->tree_node_idx, true);
     }
 
-    log_debug("Destroyed box [%u]", idx);
+    log_debug("Destroyed collider [%u]", idx);
 }
 
-[[nodiscard]] box *box_get(u32 idx) {
-    if (idx == 0 || idx >= box_sys.box_max_idx) {
-        log_err("box_get(): box invalid => stub");
-        return &box_sys.box_pool[idx];
+[[nodiscard]] collider *collider_get(u32 idx) {
+    if (idx == 0 || idx >= collider_sys.collider_max_idx) {
+        log_err("collider_get(): collider invalid => stub");
+        return &collider_sys.collider_pool[idx];
     }
-    return &box_sys.box_pool[idx];
+    return &collider_sys.collider_pool[idx];
 }
 
-void box_add_to_tree(u32 idx) {
-    if (idx == 0 || idx >= box_sys.box_max_idx) {
-        log_err("box_add_tree(): box invalid");
+void collider_add_to_tree(u32 idx) {
+    if (idx == 0 || idx >= collider_sys.collider_max_idx) {
+        log_err("collider_add_tree(): collider invalid");
         return;
     }
-    if (box_sys.box_pool[idx].pool_flag != ALIVE_POOL_FLAG) {
-        log_err("box_add_tree(): box is dead");
+    if (collider_sys.collider_pool[idx].pool_flag != ALIVE_POOL_FLAG) {
+        log_err("collider_add_tree(): collider is dead");
         return;
     }
 
-    box_get(idx)->tree_node_idx = box_tree_insert(idx, true);
-    // log_info(">>>>> %u", box_get(idx)->tree_node_idx);
+    collider_get(idx)->tree_node_idx = collider_tree_insert(idx, true);
+    // log_info(">>>>> %u", collider_get(idx)->tree_node_idx);
 }
 
 // =============================================================================
-u32 box_node_create(u32 box_idx) {
-    assert(box_sys.tree_len < box_sys.tree_cap);
+u32 collider_node_create(u32 collider_idx) {
+    assert(collider_sys.tree_len < collider_sys.tree_cap);
 
-    usize idx = box_sys.tree_head;
-    box_node *bn = &box_sys.tree_pool[idx];
+    usize idx = collider_sys.tree_head;
+    collider_node *bn = &collider_sys.tree_pool[idx];
 
-    if (idx == box_sys.tree_max_idx) {
-        ++box_sys.tree_max_idx;
-        ++box_sys.tree_head;
+    if (idx == collider_sys.tree_max_idx) {
+        ++collider_sys.tree_max_idx;
+        ++collider_sys.tree_head;
     } else {
-        box_sys.tree_head = bn->pool_flag;
+        collider_sys.tree_head = bn->pool_flag;
     }
 
-    ++box_sys.tree_len;
+    ++collider_sys.tree_len;
 
-    memset(bn, 0, sizeof(box_node));
+    memset(bn, 0, sizeof(collider_node));
     bn->pool_flag = ALIVE_POOL_FLAG;
 
-    // box_idx == 0 => no linking against any actual box
-    if (box_idx != 0) {
-        box *bx = box_get(box_idx);
-        bn->box_idx = box_idx;
-        bn->x = bx->x - box_sys.fat_box_offset;
-        bn->y = bx->y - box_sys.fat_box_offset;
-        bn->w = bx->w + box_sys.fat_box_offset + box_sys.fat_box_offset;
-        bn->h = bx->h + box_sys.fat_box_offset + box_sys.fat_box_offset;
+    // collider_idx == 0 => no linking against any actual collider
+    if (collider_idx != 0) {
+        collider *bx = collider_get(collider_idx);
+        bn->collider_idx = collider_idx;
+        bn->x = bx->x - collider_sys.fat_aabb_offset;
+        bn->y = bx->y - collider_sys.fat_aabb_offset;
+        bn->w = bx->w + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
+        bn->h = bx->h + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
         bn->flag = bx->flag;
     }
 
     return idx;
 }
 
-void box_node_destroy(u32 idx) {
-    box_node *bn = &box_sys.tree_pool[idx];
+void collider_node_destroy(u32 idx) {
+    collider_node *bn = &collider_sys.tree_pool[idx];
     assert(bn->pool_flag == ALIVE_POOL_FLAG);
 
-    bn->pool_flag = box_sys.tree_head;
-    box_sys.tree_head = idx;
+    bn->pool_flag = collider_sys.tree_head;
+    collider_sys.tree_head = idx;
 
-    --box_sys.tree_len;
+    --collider_sys.tree_len;
 }
 
-void box_node_update(u32 box_idx) {
-    box *bx = box_get(box_idx);
-    box_node *bn = &box_sys.tree_pool[bx->tree_node_idx];
-    bn->box_idx = box_idx;
-    bn->x = bx->x - box_sys.fat_box_offset;
-    bn->y = bx->y - box_sys.fat_box_offset;
-    bn->w = bx->w + box_sys.fat_box_offset + box_sys.fat_box_offset;
-    bn->h = bx->h + box_sys.fat_box_offset + box_sys.fat_box_offset;
+void collider_node_update(u32 collider_idx) {
+    collider *bx = collider_get(collider_idx);
+    collider_node *bn = &collider_sys.tree_pool[bx->tree_node_idx];
+    bn->collider_idx = collider_idx;
+    bn->x = bx->x - collider_sys.fat_aabb_offset;
+    bn->y = bx->y - collider_sys.fat_aabb_offset;
+    bn->w = bx->w + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
+    bn->h = bx->h + collider_sys.fat_aabb_offset + collider_sys.fat_aabb_offset;
     bn->flag = bx->flag;
 }
 
-[[nodiscard]] box_node *box_node_get(u32 idx) {
-    assert(idx != 0 && idx < box_sys.tree_max_idx);
-    return &box_sys.tree_pool[idx];
+[[nodiscard]] collider_node *collider_node_get(u32 idx) {
+    assert(idx != 0 && idx < collider_sys.tree_max_idx);
+    return &collider_sys.tree_pool[idx];
 }
 
-bool box_node_is_leaf(u32 idx) {
-    if (box_node_get(idx)->child[0] == 0) {
-        assert(box_node_get(idx)->child[1] == 0);
+bool collider_node_is_leaf(u32 idx) {
+    if (collider_node_get(idx)->child[0] == 0) {
+        assert(collider_node_get(idx)->child[1] == 0);
         return true;
     }
     return false;
 }
 
-f32 box_aabb_merged_node_area(u32 l_idx, u32 r_idx) {
-    box_node l_node = *box_node_get(l_idx);
-    box_node r_node = *box_node_get(r_idx);
+f32 collider_aabb_merged_node_area(u32 l_idx, u32 r_idx) {
+    collider_node l_node = *collider_node_get(l_idx);
+    collider_node r_node = *collider_node_get(r_idx);
 
     f32 min_x = fminf(l_node.x, r_node.x);
     f32 min_y = fminf(l_node.y, r_node.y);
@@ -187,10 +187,10 @@ f32 box_aabb_merged_node_area(u32 l_idx, u32 r_idx) {
     return merged_w * merged_h;
 }
 
-void box_aabb_merge_node(u32 dest_idx, u32 a_idx, u32 b_idx) {
-    box_node *dest_node = box_node_get(dest_idx);
-    box_node a_node = *box_node_get(a_idx);
-    box_node b_node = *box_node_get(b_idx);
+void collider_aabb_merge_node(u32 dest_idx, u32 a_idx, u32 b_idx) {
+    collider_node *dest_node = collider_node_get(dest_idx);
+    collider_node a_node = *collider_node_get(a_idx);
+    collider_node b_node = *collider_node_get(b_idx);
 
     f32 min_x = (a_node.x < b_node.x) ? a_node.x : b_node.x;
     f32 min_y = (a_node.y < b_node.y) ? a_node.y : b_node.y;
@@ -209,13 +209,13 @@ void box_aabb_merge_node(u32 dest_idx, u32 a_idx, u32 b_idx) {
     dest_node->h = max_y - min_y;
 }
 
-void box_node_recal_aabb_height(u32 node_idx) {
-    if (box_node_is_leaf(node_idx)) return;
+void collider_node_recal_aabb_height(u32 node_idx) {
+    if (collider_node_is_leaf(node_idx)) return;
 
-    box_node *node = box_node_get(node_idx);
+    collider_node *node = collider_node_get(node_idx);
 
     u32 child_idx[2] = { node->child[0], node->child[1] };
-    box_node *child_node[2] = { box_node_get(child_idx[0]), box_node_get(child_idx[1]) };
+    collider_node *child_node[2] = { collider_node_get(child_idx[0]), collider_node_get(child_idx[1]) };
 
     f32 min_x = (child_node[0]->x < child_node[1]->x) ? child_node[0]->x : child_node[1]->x;
     f32 min_y = (child_node[0]->y < child_node[1]->y) ? child_node[0]->y : child_node[1]->y;
@@ -238,35 +238,35 @@ void box_node_recal_aabb_height(u32 node_idx) {
                    : child_node[1]->height + 1;
 }
 
-u32 box_tree_insert(u32 box_idx, bool create_new_node) {
-    if (box_sys.tree_root == 0) {
-        box_sys.tree_root = box_node_create(box_idx);
-        return box_sys.tree_root;
+u32 collider_tree_insert(u32 collider_idx, bool create_new_node) {
+    if (collider_sys.tree_root == 0) {
+        collider_sys.tree_root = collider_node_create(collider_idx);
+        return collider_sys.tree_root;
     }
 
     // new node
-    u32 insert_idx = create_new_node ? box_node_create(box_idx) : box_get(box_idx)->tree_node_idx;
-    if (!create_new_node) box_node_update(box_idx);
-    box_node *insert_node = box_node_get(insert_idx);
+    u32 insert_idx = create_new_node ? collider_node_create(collider_idx) : collider_get(collider_idx)->tree_node_idx;
+    if (!create_new_node) collider_node_update(collider_idx);
+    collider_node *insert_node = collider_node_get(insert_idx);
 
     // get the node to insert to and rebalance tree
-    u32 cur_idx = box_sys.tree_root;
+    u32 cur_idx = collider_sys.tree_root;
     while (true) {
-        if (box_node_is_leaf(cur_idx)) break;
+        if (collider_node_is_leaf(cur_idx)) break;
 
-        box_node *cur_node = box_node_get(cur_idx);
+        collider_node *cur_node = collider_node_get(cur_idx);
 
         u32 child_idx[2] = { cur_node->child[0], cur_node->child[1] };
 
-        box_node *child_node[2] = { box_node_get(child_idx[0]), box_node_get(child_idx[1]) };
+        collider_node *child_node[2] = { collider_node_get(child_idx[0]), collider_node_get(child_idx[1]) };
 
         // cost to compare to decide wheter goes does or what (math stuff)
         f32 cur_cost = cur_node->w * cur_node->h;
 
         f32 child_cost[2] = {0};
-        child_cost[0] = box_aabb_merged_node_area(child_idx[0], insert_idx)
+        child_cost[0] = collider_aabb_merged_node_area(child_idx[0], insert_idx)
                         - (child_node[0]->w * child_node[0]->h);
-        child_cost[1] = box_aabb_merged_node_area(child_idx[1], insert_idx)
+        child_cost[1] = collider_aabb_merged_node_area(child_idx[1], insert_idx)
                         - (child_node[1]->w * child_node[1]->h);
 
         //
@@ -279,12 +279,12 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
 
         // rebalance tree
         // instead of rotate tree in normal way, just re-wire stuff to retain the aabb data
-        if (cur_idx != box_sys.tree_root
+        if (cur_idx != collider_sys.tree_root
             && child_node[min_i]->height > child_node[1 - min_i]->height) {
 
             u32 curpar_idx = cur_node->parent;
             assert(curpar_idx != 0);
-            box_node *curpar_node = box_node_get(curpar_idx);
+            collider_node *curpar_node = collider_node_get(curpar_idx);
 
             usize cur_child_i = curpar_node->child[0] == cur_idx ? 0 : 1;
             usize _cur_sib_idx = curpar_node->child[1 - cur_child_i];
@@ -299,11 +299,11 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
             child_node[1 - min_i]->parent = cur_idx;
 
             cur_node->child[1] = _cur_sib_idx;
-            box_node_get(_cur_sib_idx)->parent = cur_idx;
+            collider_node_get(_cur_sib_idx)->parent = cur_idx;
 
 
             // remerge some aabb, height
-            box_node_recal_aabb_height(cur_idx);
+            collider_node_recal_aabb_height(cur_idx);
         }
 
         cur_idx = child_idx[min_i];
@@ -311,9 +311,9 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
 
     // insert new nodes
     // common parent node of insert_node and cur_node
-    u32 par_idx = box_node_create(0);
-    box_node *par_node = box_node_get(par_idx);
-    box_node *cur_node = box_node_get(cur_idx);
+    u32 par_idx = collider_node_create(0);
+    collider_node *par_node = collider_node_get(par_idx);
+    collider_node *cur_node = collider_node_get(cur_idx);
 
     u32 parpar_idx = cur_node->parent;
 
@@ -327,12 +327,12 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
     par_node->height = cur_node->height + 1;
 
     if (parpar_idx == 0) { // par_node is new tree_root
-        box_sys.tree_root = par_idx;
+        collider_sys.tree_root = par_idx;
         par_node->parent = 0;
     }
     else {
         // rewire parent of parent
-        box_node *parpar_node = box_node_get(parpar_idx);
+        collider_node *parpar_node = collider_node_get(parpar_idx);
         if (parpar_node->child[0] == cur_idx) {
             parpar_node->child[0] = par_idx;
         } else {
@@ -347,23 +347,23 @@ u32 box_tree_insert(u32 box_idx, bool create_new_node) {
     // update parents' aabb upward
     u32 ud_idx = insert_node->parent;
     while (ud_idx != 0) {
-        box_node_recal_aabb_height(ud_idx);
-        ud_idx = box_node_get(ud_idx)->parent;
+        collider_node_recal_aabb_height(ud_idx);
+        ud_idx = collider_node_get(ud_idx)->parent;
     }
 
     // log_info("tree after INSERT node[%u]", insert_idx);
-    // debug_print_box_tree();
+    // debug_print_collider_tree();
     // printf("\n");
 
     return insert_idx;
 }
 
-void box_tree_remove(u32 node_idx, bool destroy_node) {
-    assert(box_node_is_leaf(node_idx));
+void collider_tree_remove(u32 node_idx, bool destroy_node) {
+    assert(collider_node_is_leaf(node_idx));
 
-    if (node_idx == box_sys.tree_root) {
-        box_node_destroy(node_idx);
-        box_sys.tree_root = 0;
+    if (node_idx == collider_sys.tree_root) {
+        collider_node_destroy(node_idx);
+        collider_sys.tree_root = 0;
         return;
     }
 
@@ -371,69 +371,69 @@ void box_tree_remove(u32 node_idx, bool destroy_node) {
 
     // destroy actual node
     {
-        box_node *remv_node = box_node_get(node_idx);
+        collider_node *remv_node = collider_node_get(node_idx);
 
         u32 par_idx = remv_node->parent;
-        box_node *par_node = box_node_get(par_idx);
+        collider_node *par_node = collider_node_get(par_idx);
 
         u32 parpar_idx = par_node->parent;
         if (parpar_idx == 0) { // if there's only total 2 leaf node => tree back to 1 node only
-            box_sys.tree_root = par_node->child[0] != node_idx
+            collider_sys.tree_root = par_node->child[0] != node_idx
                                 ? par_node->child[0]
                                 : par_node->child[1];
-            box_node_get(box_sys.tree_root)->parent = 0;
+            collider_node_get(collider_sys.tree_root)->parent = 0;
 
-            box_node_destroy(node_idx);
-            box_node_destroy(par_idx);
+            collider_node_destroy(node_idx);
+            collider_node_destroy(par_idx);
             return;
         }
-        box_node *parpar_node = box_node_get(parpar_idx);
+        collider_node *parpar_node = collider_node_get(parpar_idx);
 
         u32 remv_sib_idx = par_node->child[0] == node_idx ? par_node->child[1] : par_node->child[0];
-        box_node *remv_sib_node = box_node_get(remv_sib_idx);
+        collider_node *remv_sib_node = collider_node_get(remv_sib_idx);
 
         usize par_child_i = parpar_node->child[0] == par_idx ? 0 : 1;
 
         parpar_node->child[par_child_i] = remv_sib_idx;
         remv_sib_node->parent = parpar_idx;
 
-        box_node_recal_aabb_height(parpar_idx);
+        collider_node_recal_aabb_height(parpar_idx);
 
-        if (destroy_node) box_node_destroy(node_idx);
-        box_node_destroy(par_idx);
+        if (destroy_node) collider_node_destroy(node_idx);
+        collider_node_destroy(par_idx);
 
         cur_idx = remv_sib_idx;
     }
     //
     // log_info("tree just-destroy-stuff REMOVE [%u]", node_idx);
-    // debug_print_box_tree();
+    // debug_print_collider_tree();
     // printf("\n");
     //
     // update parents' aabb upward and rebalance tree
     while (cur_idx != 0) {
-        if (cur_idx == box_sys.tree_root) {
-            box_sys.tree_root = cur_idx;
+        if (cur_idx == collider_sys.tree_root) {
+            collider_sys.tree_root = cur_idx;
             break;
         }
 
-        box_node *cur_node = box_node_get(cur_idx);
+        collider_node *cur_node = collider_node_get(cur_idx);
 
         u32 curpar_idx = cur_node->parent;
-        box_node *curpar_node = box_node_get(curpar_idx);
+        collider_node *curpar_node = collider_node_get(curpar_idx);
 
         u32 cur_child_i = curpar_node->child[0] == cur_idx ? 0 : 1;
 
         u32 cur_sib_idx = curpar_node->child[1 - cur_child_i];
-        box_node *cur_sib_node = box_node_get(cur_sib_idx);
+        collider_node *cur_sib_node = collider_node_get(cur_sib_idx);
 
         // rebalance tree
         // instead of rotate tree in normal way, just re-wire stuff to retain the aabb data
-        if (cur_idx != box_sys.tree_root
+        if (cur_idx != collider_sys.tree_root
             && cur_sib_node->height > cur_node->height) {
 
             u32 _cur_sib_child_idx[2] = { cur_sib_node->child[0], cur_sib_node->child[1] };
-            box_node *_cur_sib_child_node[2] = { box_node_get(_cur_sib_child_idx[0]),
-                                                 box_node_get(_cur_sib_child_idx[1]) };
+            collider_node *_cur_sib_child_node[2] = { collider_node_get(_cur_sib_child_idx[0]),
+                                                 collider_node_get(_cur_sib_child_idx[1]) };
             u32 cur_sib_child_max_i = _cur_sib_child_node[0]->height > _cur_sib_child_node[1]->height ? 0 : 1;
 
             curpar_node->child[0] = cur_sib_idx;
@@ -449,50 +449,50 @@ void box_tree_remove(u32 node_idx, bool destroy_node) {
             cur_node->parent = cur_sib_idx;
 
             // remerge some aabb, height
-            box_node_recal_aabb_height(cur_sib_idx);
+            collider_node_recal_aabb_height(cur_sib_idx);
         }
 
         cur_idx = curpar_idx;
 
         // update parent aabb, height
         if (cur_idx != 0) { // if now the tree only have one
-            box_node_recal_aabb_height(cur_idx);
+            collider_node_recal_aabb_height(cur_idx);
         }
     }
 
     // log_info("tree after REMOVE [%u]", node_idx);
-    // debug_print_box_tree();
+    // debug_print_collider_tree();
     // printf("\n");
 }
 
 // =============================================================================
-void box_sys_update() {
-    for (usize i = 1; i < box_sys.box_max_idx; ++i) {
-        box *bx = box_get(i);
+void collider_sys_update() {
+    for (usize i = 1; i < collider_sys.collider_max_idx; ++i) {
+        collider *bx = collider_get(i);
         if (bx->pool_flag != ALIVE_POOL_FLAG) continue;
 
         if (bx->tree_node_idx != 0) {
-            box_node *bn = box_node_get(bx->tree_node_idx);
+            collider_node *bn = collider_node_get(bx->tree_node_idx);
             if (bx->x < bn->x
                 || bx->y < bn->y
                 || bx->x + bx->w > bn->x + bn->w
                 || bx->y + bx->h > bn->y + bn->h) {
-                box_tree_remove(bx->tree_node_idx, false);
-                box_tree_insert(i, false);
+                collider_tree_remove(bx->tree_node_idx, false);
+                collider_tree_insert(i, false);
             }
         }
     }
 }
 
-void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
-    box_node *node;
+void collider_sys_draw_node_debug(u32 node_idx, u32 max_height) {
+    collider_node *node;
     float inset;
     Rectangle rect;
     Color color;
 
     if (node_idx == 0) return;
 
-    node = box_node_get(node_idx);
+    node = collider_node_get(node_idx);
     if (!node) return;
 
     color.r = 255;
@@ -512,8 +512,8 @@ void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
 
     DrawRectangleLinesEx(rect, 1.0f, color);
 
-    if (node->box_idx != 0) {
-        box *bx = box_get(node->box_idx);
+    if (node->collider_idx != 0) {
+        collider *bx = collider_get(node->collider_idx);
         rect.x = bx->x;
         rect.y = bx->y;
         rect.width = bx->w;
@@ -521,26 +521,26 @@ void box_sys_draw_node_debug(u32 node_idx, u32 max_height) {
         DrawRectangleLinesEx(rect, 2.0f, GREEN);
     }
 
-    box_sys_draw_node_debug(node->child[0], max_height);
-    box_sys_draw_node_debug(node->child[1], max_height);
+    collider_sys_draw_node_debug(node->child[0], max_height);
+    collider_sys_draw_node_debug(node->child[1], max_height);
 }
 
-void box_sys_draw_debug(void) {
-    if (box_sys.tree_root == 0) return;
+void collider_sys_draw_debug(void) {
+    if (collider_sys.tree_root == 0) return;
 
-    box_node *root = box_node_get(box_sys.tree_root);
+    collider_node *root = collider_node_get(collider_sys.tree_root);
     if (!root) return;
 
     // The root node's height represents the maximum depth of the tree
     u32 max_height = root->height;
 
-    box_sys_draw_node_debug(box_sys.tree_root, max_height);
+    collider_sys_draw_node_debug(collider_sys.tree_root, max_height);
 }
 
-void print_box_tree_recursive(u32 idx, char *prefix, bool is_left, bool is_root) {
+void print_collider_tree_recursive(u32 idx, char *prefix, bool is_left, bool is_root) {
     if (idx == 0) return;
 
-    box_node *node = box_node_get(idx);
+    collider_node *node = collider_node_get(idx);
     if (!node) return;
 
     // Print current line prefix and branch connector
@@ -562,19 +562,19 @@ void print_box_tree_recursive(u32 idx, char *prefix, bool is_left, bool is_root)
     u32 right = node->child[1];
 
     if (left != 0 && right != 0) {
-        print_box_tree_recursive(left, next_prefix, true, false);
-        print_box_tree_recursive(right, next_prefix, false, false);
+        print_collider_tree_recursive(left, next_prefix, true, false);
+        print_collider_tree_recursive(right, next_prefix, false, false);
     } else if (left != 0) {
-        print_box_tree_recursive(left, next_prefix, false, false);
+        print_collider_tree_recursive(left, next_prefix, false, false);
     } else if (right != 0) {
-        print_box_tree_recursive(right, next_prefix, false, false);
+        print_collider_tree_recursive(right, next_prefix, false, false);
     }
 }
 
-void debug_print_box_tree() {
-    if (box_sys.tree_root == 0) {
+void debug_print_collider_tree() {
+    if (collider_sys.tree_root == 0) {
         printf("(empty tree)\n");
         return;
     }
-    print_box_tree_recursive(box_sys.tree_root, "", false, true);
+    print_collider_tree_recursive(collider_sys.tree_root, "", false, true);
 }
