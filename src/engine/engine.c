@@ -5,7 +5,7 @@
 #include "entity.h"
 #include "draw.h"
 
-#define ENTITY_COUNT 10000
+#define ENTITY_COUNT 1000
 
 #define MIN_X 0 + 10
 #define MAX_X 1280 - 10
@@ -28,10 +28,10 @@ static inline f32 rand_f32(f32 min, f32 max) {
 void engine_init() {
     arena_init(&omni_arena, 100 << 10 << 10); // 100MB
 
-    draw_sys_init(99999, 99999);
-    sprite_sys_init(99999, 99999);
-    collider_sys_init(99999, 30.0f);
-    entity_sys_init(99999);
+    draw_sys_init(128, 10002);
+    sprite_sys_init(10002, 10002);
+    collider_sys_init(10002, 30.0f);
+    entity_sys_init(10002);
 
     texture_load("img/char_00.png");
     sprite_profile_make(1, 0,  0, 20, 20); // 1
@@ -113,5 +113,6 @@ void engine_draw() {
 }
 
 void engine_destroy() {
+    draw_sys_destroy(); // need to destroy textures
     arena_destroy(&omni_arena);
 }

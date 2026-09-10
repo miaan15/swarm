@@ -36,8 +36,19 @@ void draw_sys_init(usize texture_cap, usize drawer_cap) {
     ((Texture2D *)draw_sys.tex_arr)[0] = stub_tex;
 }
 
+void draw_sys_destroy() {
+    for (usize i = 0; i < draw_sys.tex_len; ++i) {
+        UnloadTexture(((Texture2D *)draw_sys.tex_arr)[i]);
+    }
+}
+
 // =============================================================================
 u32 texture_load(const char *path) {
+    if (draw_sys.tex_len >= draw_sys.tex_cap) {
+        log_err("texture_load(): too much textures => stub");
+        return 0;
+    }
+
     char abs_path[256];
     strcpy(abs_path, ASSET_DIR);
     strcat(abs_path, "/");

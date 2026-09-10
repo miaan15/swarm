@@ -21,6 +21,7 @@ int main(void)
         BeginDrawing();
             ClearBackground(RAYWHITE);
             engine_draw();
+            DrawRectangle(0, 0, 90, 40, WHITE);
             DrawFPS(10, 10);
         EndDrawing();
     }

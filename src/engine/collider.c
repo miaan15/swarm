@@ -419,38 +419,40 @@ void collider_tree_remove(u32 node_idx, bool destroy_node) {
         collider_node *cur_node = collider_node_get(cur_idx);
 
         u32 curpar_idx = cur_node->parent;
-        collider_node *curpar_node = collider_node_get(curpar_idx);
+        // NOTE: well, apparently, no tree rotate in delete make better performance
 
-        u32 cur_child_i = curpar_node->child[0] == cur_idx ? 0 : 1;
+        // collider_node *curpar_node = collider_node_get(curpar_idx);
 
-        u32 cur_sib_idx = curpar_node->child[1 - cur_child_i];
-        collider_node *cur_sib_node = collider_node_get(cur_sib_idx);
+        // u32 cur_child_i = curpar_node->child[0] == cur_idx ? 0 : 1;
+
+        // u32 cur_sib_idx = curpar_node->child[1 - cur_child_i];
+        // collider_node *cur_sib_node = collider_node_get(cur_sib_idx);
 
         // rebalance tree
         // instead of rotate tree in normal way, just re-wire stuff to retain the aabb data
-        if (cur_idx != collider_sys.tree_root
-            && cur_sib_node->height > cur_node->height) {
-
-            u32 _cur_sib_child_idx[2] = { cur_sib_node->child[0], cur_sib_node->child[1] };
-            collider_node *_cur_sib_child_node[2] = { collider_node_get(_cur_sib_child_idx[0]),
-                                                 collider_node_get(_cur_sib_child_idx[1]) };
-            u32 cur_sib_child_max_i = _cur_sib_child_node[0]->height > _cur_sib_child_node[1]->height ? 0 : 1;
-
-            curpar_node->child[0] = cur_sib_idx;
-            cur_sib_node->parent = curpar_idx;
-
-            curpar_node->child[1] = _cur_sib_child_idx[cur_sib_child_max_i];
-            _cur_sib_child_node[cur_sib_child_max_i]->parent = curpar_idx;
-
-            cur_sib_node->child[0] = _cur_sib_child_idx[1 - cur_sib_child_max_i];
-            _cur_sib_child_node[1 - cur_sib_child_max_i]->parent = cur_sib_idx;
-
-            cur_sib_node->child[1] = cur_idx;
-            cur_node->parent = cur_sib_idx;
-
-            // remerge some aabb, height
-            collider_node_recal_aabb_height(cur_sib_idx);
-        }
+        // if (cur_idx != collider_sys.tree_root
+        //     && cur_sib_node->height > cur_node->height) {
+        //
+        //     u32 _cur_sib_child_idx[2] = { cur_sib_node->child[0], cur_sib_node->child[1] };
+        //     collider_node *_cur_sib_child_node[2] = { collider_node_get(_cur_sib_child_idx[0]),
+        //                                          collider_node_get(_cur_sib_child_idx[1]) };
+        //     u32 cur_sib_child_max_i = _cur_sib_child_node[0]->height > _cur_sib_child_node[1]->height ? 0 : 1;
+        //
+        //     curpar_node->child[0] = cur_sib_idx;
+        //     cur_sib_node->parent = curpar_idx;
+        //
+        //     curpar_node->child[1] = _cur_sib_child_idx[cur_sib_child_max_i];
+        //     _cur_sib_child_node[cur_sib_child_max_i]->parent = curpar_idx;
+        //
+        //     cur_sib_node->child[0] = _cur_sib_child_idx[1 - cur_sib_child_max_i];
+        //     _cur_sib_child_node[1 - cur_sib_child_max_i]->parent = cur_sib_idx;
+        //
+        //     cur_sib_node->child[1] = cur_idx;
+        //     cur_node->parent = cur_sib_idx;
+        //
+        //     // remerge some aabb, height
+        //     collider_node_recal_aabb_height(cur_sib_idx);
+        // }
 
         cur_idx = curpar_idx;
 
@@ -528,7 +530,6 @@ void collider_sys_draw_debug(void) {
     collider_node *root = collider_node_get(collider_sys.tree_root);
     if (!root) return;
 
-    // The root node's height represents the maximum depth of the tree
     u32 max_height = root->height;
 
     collider_sys_draw_node_debug(collider_sys.tree_root, max_height);
