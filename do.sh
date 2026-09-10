@@ -62,12 +62,12 @@ ldflags = -fsanitize=address,undefined -ldl -lm -lpthread -Lvendor/build/raylib/
 rule cc
   depfile = $out.d
   deps = gcc
-  command = gcc -MD -MF $out.d $cflags -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\""
+  command = gcc -MD -MF $out.d $cflags -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\"" -D_EXE_DIR="\"@PROJECT_DIR@/build\""
 
 rule cc_pic
   depfile = $out.d
   deps = gcc
-  command = gcc -MD -MF $out.d $cflags -fPIC -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\""
+  command = gcc -MD -MF $out.d $cflags -fPIC -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\"" -D_EXE_DIR="\"@PROJECT_DIR@/build\""
 
 rule link_exe
   command = gcc $in -o $out $ldflags
