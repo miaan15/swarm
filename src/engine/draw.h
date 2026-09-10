@@ -26,10 +26,10 @@ extern struct draw_sys draw_sys;
 
 // =============================================================================
 void draw_sys_init(usize texture_cap, usize drawer_cap);
-void draw_sys_destroy();
 
 // =============================================================================
 u32 texture_load(const char *path);
+void texture_destroy_all();
 
 // =============================================================================
 drawer *draw_make();

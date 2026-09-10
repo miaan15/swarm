@@ -36,12 +36,6 @@ void draw_sys_init(usize texture_cap, usize drawer_cap) {
     ((Texture2D *)draw_sys.tex_arr)[0] = stub_tex;
 }
 
-void draw_sys_destroy() {
-    for (usize i = 0; i < draw_sys.tex_len; ++i) {
-        UnloadTexture(((Texture2D *)draw_sys.tex_arr)[i]);
-    }
-}
-
 // =============================================================================
 u32 texture_load(const char *path) {
     if (draw_sys.tex_len >= draw_sys.tex_cap) {
@@ -65,6 +59,12 @@ u32 texture_load(const char *path) {
     log_debug("Loaded Texture [%u] from \"%s\"", draw_sys.tex_len, abs_path);
 
     return draw_sys.tex_len++;
+}
+
+void texture_destroy_all() {
+    for (usize i = 0; i < draw_sys.tex_len; ++i) {
+        UnloadTexture(((Texture2D *)draw_sys.tex_arr)[i]);
+    }
 }
 
 // =============================================================================

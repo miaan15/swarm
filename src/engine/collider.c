@@ -54,6 +54,7 @@ u32 collider_create(collider **r_collider) {
     // setup collider
     memset(col, 0, sizeof(collider));
     col->pool_flag = ALIVE_POOL_FLAG;
+    col->pool_idx = idx;
 
     log_debug("Created Collider [%u]", idx);
 
@@ -108,10 +109,10 @@ void collider_add_to_tree(u32 idx) {
 u32 collider_node_create(u32 collider_idx) {
     assert(collider_sys.tree_len < collider_sys.tree_cap);
 
-    usize idx = collider_sys.tree_head;
-    collider_node *col_node = &collider_sys.tree_pool[idx];
+    usize node_idx = collider_sys.tree_head;
+    collider_node *col_node = &collider_sys.tree_pool[node_idx];
 
-    if (idx == collider_sys.tree_max_idx) {
+    if (node_idx == collider_sys.tree_max_idx) {
         ++collider_sys.tree_max_idx;
         ++collider_sys.tree_head;
     } else {
@@ -122,6 +123,7 @@ u32 collider_node_create(u32 collider_idx) {
 
     memset(col_node, 0, sizeof(collider_node));
     col_node->pool_flag = ALIVE_POOL_FLAG;
+    col_node->pool_idx = node_idx;
 
     // collider_idx == 0 => no linking against any actual collider
     if (collider_idx != 0) {
@@ -134,7 +136,7 @@ u32 collider_node_create(u32 collider_idx) {
         col_node->flag = col->flag;
     }
 
-    return idx;
+    return node_idx;
 }
 
 void collider_node_destroy(u32 idx) {

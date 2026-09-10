@@ -38,6 +38,7 @@ u32 entity_create(entity **r_entity) {
     // setup entity
     memset(ett, 0, sizeof(entity));
     ett->pool_flag = ALIVE_POOL_FLAG;
+    ett->pool_idx = idx;
 
     log_debug("Created Entity [%u]", idx);
 
@@ -121,6 +122,8 @@ void entity_sys_update() {
     for (usize i = 1; i < entity_sys.max_idx; ++i) {
         entity *ett = entity_get(i);
         if (ett->pool_flag != ALIVE_POOL_FLAG) continue;
+
+        ett->update_fn(i);
 
         // update all sprites
         for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {

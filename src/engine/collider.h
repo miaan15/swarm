@@ -4,6 +4,7 @@
 
 typedef struct {
     u32 pool_flag;
+    u32 pool_idx;
 
     f32 x, y, w, h;
 
@@ -19,6 +20,7 @@ typedef struct {
 
 typedef struct {
     u32 pool_flag;
+    u32 pool_idx;
 
     u32 collider_idx;
 

@@ -64,6 +64,11 @@ rule cc
   deps = gcc
   command = gcc -MD -MF $out.d $cflags -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\""
 
+rule cc_pic
+  depfile = $out.d
+  deps = gcc
+  command = gcc -MD -MF $out.d $cflags -fPIC -c $in -o $out -D_PROJECT_DIR="\"@PROJECT_DIR@\""
+
 rule link_exe
   command = gcc $in -o $out $ldflags
 
@@ -78,7 +83,7 @@ EOF
     echo "build build/${src%.c}.o: cc $src"
   done
   for src in $GAME_SRCS; do
-    echo "build build/${src%.c}.o: cc $src"
+    echo "build build/${src%.c}.o: cc_pic $src"
   done
   echo "build $MAIN_OBJ: cc $MAIN_SRC"
   echo ""

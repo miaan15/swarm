@@ -26,7 +26,7 @@ void sprite_sys_init(usize profile_cap, usize sprite_cap) {
 
 // =============================================================================
 u32 sprite_profile_make(u32 tex, f32 x, f32 y, f32 w, f32 h) {
-    sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_profile){tex, x, y, w, h};
+    sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_profile){ tex, x, y, w, h };
 
     log_debug("Made SpriteProfile [%u]: Texture = [%u]; x = %.0f; y = %.0f; w = %.0f; h = %.0f", sprite_sys.prf_len, tex, x, y, w, h);
 
@@ -59,6 +59,7 @@ u32 sprite_create(u32 profile_idx, sprite **r_sprite) {
     // setup sprite
     memset(spr, 0, sizeof(sprite));
     spr->pool_flag = ALIVE_POOL_FLAG;
+    spr->pool_idx = idx;
     spr->profile_idx = profile_idx;
 
     log_debug("Created Sprite [%u]: SpriteProfile = [%u]", idx, profile_idx);

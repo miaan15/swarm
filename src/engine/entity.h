@@ -6,6 +6,9 @@
 
 typedef struct {
     u32 pool_flag;
+    u32 pool_idx;
+
+    void (*update_fn)(u32 entity_idx);
 
     f32 x, y;
 

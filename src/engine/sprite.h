@@ -2,6 +2,7 @@
 
 #include "define.h"
 
+// TODO use QuadTree to culling
 typedef struct {
     u32 tex;
     f32 x, y, w, h;
@@ -9,6 +10,7 @@ typedef struct {
 
 typedef struct {
     u32 pool_flag;
+    u32 pool_idx;
 
     u32 profile_idx;
     f32 x, y;
