@@ -54,6 +54,8 @@ void entity_destroy(u32 idx) {
         return;
     }
 
+    if (ett->destroy_fn != nullptr) ett->destroy_fn(idx);
+
     ett->pool_flag = entity_sys.head;
     entity_sys.head = idx;
 
@@ -66,7 +68,7 @@ void entity_destroy(u32 idx) {
 
         sprite_destroy(sprite_idx);
 
-        sprite_idx = spr->next;
+        sprite_idx = spr->next_sprite;
     }
 
     // destroy all collideres
@@ -76,7 +78,7 @@ void entity_destroy(u32 idx) {
 
         collider_destroy(collider_idx);
 
-        collider_idx = col->next;
+        collider_idx = col->next_collider;
     }
 
     log_debug("Destroyed Entity [%u]", idx);
@@ -95,10 +97,12 @@ u32 entity_add_sprite(u32 idx, u32 profile_idx, sprite **r_sprite) {
     u32 spr_idx = sprite_create(profile_idx, r_sprite);
 
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_sprite)->next = ett->sprite_begin;
+    (*r_sprite)->next_sprite = ett->sprite_begin;
     ett->sprite_begin = spr_idx;
 
     (*r_sprite)->entity_idx = idx;
+
+    log_debug("Added Sprite [%u] to Entity [%u]", spr_idx, idx);
 
     return spr_idx;
 }
@@ -108,13 +112,28 @@ u32 entity_add_collider(u32 idx, collider **r_collider) {
     collider_add_to_tree(col_idx);
 
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_collider)->next = ett->collider_begin;
+    (*r_collider)->next_collider = ett->collider_begin;
     ett->collider_begin = col_idx;
 
     (*r_collider)->entity_idx = idx;
 
+    log_debug("Added Collider [%u] to Entity [%u]", col_idx, idx);
 
     return col_idx;
+}
+
+u32 entity_add_effect(u32 idx, u32 effect_type, effect **r_effect) {
+    u32 eff_idx = effect_create(effect_type, r_effect);
+
+    entity *ett = &entity_sys.entity_pool[idx];
+    (*r_effect)->next_effect = ett->effect_begin;
+    ett->effect_begin = eff_idx;
+
+    (*r_effect)->entity_idx = idx;
+
+    log_debug("Added Effect [%u] to Entity [%u]", eff_idx, idx);
+
+    return eff_idx;
 }
 
 // =============================================================================
@@ -123,7 +142,7 @@ void entity_sys_update() {
         entity *ett = entity_get(i);
         if (ett->pool_flag != ALIVE_POOL_FLAG) continue;
 
-        ett->update_fn(i);
+        if (ett->update_fn != nullptr) ett->update_fn(i);
 
         // update all sprites
         for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
@@ -133,7 +152,7 @@ void entity_sys_update() {
             spr->x = ett->x + spr->offset_x;
             spr->y = ett->y + spr->offset_y;
 
-            sprite_idx = spr->next;
+            sprite_idx = spr->next_sprite;
         }
 
         // update all collideres
@@ -144,7 +163,7 @@ void entity_sys_update() {
             col->x = ett->x + col->offset_x;
             col->y = ett->y + col->offset_y;
 
-            collider_idx = col->next;
+            collider_idx = col->next_collider;
         }
     }
 }

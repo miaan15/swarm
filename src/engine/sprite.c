@@ -60,6 +60,7 @@ u32 sprite_create(u32 profile_idx, sprite **r_sprite) {
     memset(spr, 0, sizeof(sprite));
     spr->pool_flag = ALIVE_POOL_FLAG;
     spr->pool_idx = idx;
+
     spr->profile_idx = profile_idx;
 
     log_debug("Created Sprite [%u]: SpriteProfile = [%u]", idx, profile_idx);

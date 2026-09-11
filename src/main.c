@@ -1,3 +1,4 @@
+#include "action.h"
 #include "arena.h"
 #include "collider.h"
 #include "context.h"
@@ -5,14 +6,17 @@
 #include "draw.h"
 #include "entity.h"
 #include "log.h"
-#include <math.h>
 #include <dlfcn.h>
 #include <raylib.h>
 #include <time.h>
 #include <unistd.h>
 
-// context stuff
+// extern stuff
 // =============================================================================
+// proxy
+void (*action_handle_fn)(action) = nullptr;
+void (*effect_handle_fn)(effect *) = nullptr;
+
 // config
 f32 screen_width = 1280;
 f32 screen_height = 720;
@@ -67,13 +71,16 @@ void engine_game_reload() {
     }
 
     dlerror(); // clear old err
-    game_init_fn = dlsym(libgame_handle, "game_init");
-    game_update_fn = dlsym(libgame_handle, "game_update");
+    game_init_fn        = dlsym(libgame_handle, "game_init");
+    game_update_fn      = dlsym(libgame_handle, "game_update");
     game_update_late_fn = dlsym(libgame_handle, "game_update_late");
-    game_input_fn = dlsym(libgame_handle, "game_input");
-    game_visual_fn = dlsym(libgame_handle, "game_visual");
-    game_draw_fn = dlsym(libgame_handle, "game_draw");
-    game_destroy_fn = dlsym(libgame_handle, "game_destroy");
+    game_input_fn       = dlsym(libgame_handle, "game_input");
+    game_visual_fn      = dlsym(libgame_handle, "game_visual");
+    game_draw_fn        = dlsym(libgame_handle, "game_draw");
+    game_destroy_fn     = dlsym(libgame_handle, "game_destroy");
+
+    action_handle_fn    = dlsym(libgame_handle, "game_action_handle");
+    effect_handle_fn    = dlsym(libgame_handle, "game_effect_handle");
 
     char *err = dlerror();
     if (err != NULL) {
@@ -97,10 +104,15 @@ int main(void)
 
     // engine set up
     draw_sys_init(1e2, 1e5);
+
     sprite_sys_init(1e5, 1e5);
     collider_sys_init(1e5, 30.0f);
+    effect_sys_init(1e5);
     entity_sys_init(1e5);
+    
+    action_sys_init(1e5);
 
+    //
     engine_game_reload();
 
     game_init_fn(); // INIT
@@ -134,6 +146,8 @@ int main(void)
 
             game_update_fn(); // UPDATE
 
+            action_sys_update();
+            effect_sys_update();
             entity_sys_update();
             collider_sys_update();
 
@@ -166,101 +180,3 @@ int main(void)
 
     return 0;
 }
-//
-// #define ENTITY_COUNT 1000
-//
-// #define MIN_X 0 + 10
-// #define MAX_X 1280 - 10
-// #define MIN_Y 0 + 10
-// #define MAX_Y 720 - 10
-//
-// typedef struct {
-//     f32 vx;
-//     f32 vy;
-// } ett_velocity;
-//
-// static ett_velocity ett_vel[ENTITY_COUNT + 1];
-//
-// static inline f32 rand_f32(f32 min, f32 max) {
-//     return min + ((f32)rand() / (f32)RAND_MAX) * (max - min);
-// }
-//
-// void engine_init() {
-//
-//
-//     texture_load("img/char_00.png");
-//     sprite_profile_make(1, 0,  0, 20, 20); // 1
-//     sprite_profile_make(1, 0, 20, 20, 20); // 2
-//     sprite_profile_make(1, 0, 40, 20, 20); // 3
-//     sprite_profile_make(1, 0, 60, 20, 20); // 4
-//
-//     for (u32 i = 1; i <= ENTITY_COUNT; ++i) {
-//         entity *ett;
-//         u32 ett_idx = entity_create(&ett);
-//
-//         sprite *spr;
-//         entity_add_sprite(ett_idx, (rand() % 4) + 1, &spr);
-//
-//         collider *col;
-//         entity_add_collider(ett_idx, &col);
-//
-//         sprite_profile spr_prf = sprite_profile_get(spr->profile_idx);
-//         f32 ext_x = spr_prf.w / 2, ext_y = spr_prf.h / 2;
-//
-//         ett->x = rand_f32(MIN_X, MAX_X - ext_x);
-//         ett->y = rand_f32(MIN_Y, MAX_Y - ext_y);
-//
-//         spr->offset_x = -ext_x;
-//         spr->offset_y = -ext_y;
-//
-//         col->offset_x = -ext_x;
-//         col->offset_y = -ext_y;
-//         col->w = ext_x * 2;
-//         col->h = ext_y * 2;
-//
-//         //
-//         f32 angle = rand_f32(0.0f, 6.2831853f);
-//         f32 speed = rand_f32(0.1f, 0.8f);
-//         ett_vel[i].vx = cosf(angle) * speed;
-//         ett_vel[i].vy = sinf(angle) * speed;
-//     }
-// }
-//
-// void engine_update() {
-//     for (u32 i = 1; i <= ENTITY_COUNT; ++i) {
-//         entity *ett = entity_get(i);
-//
-//         ett->x += ett_vel[i].vx;
-//         ett->y += ett_vel[i].vy;
-//
-//         if (ett->x <= MIN_X) {
-//             ett->x = MIN_X;
-//             ett_vel[i].vx = -ett_vel[i].vx;
-//         } else if (ett->x >= MAX_X) {
-//             ett->x = MAX_X;
-//             ett_vel[i].vx = -ett_vel[i].vx;
-//         }
-//
-//         if (ett->y <= MIN_Y) {
-//             ett->y = MIN_Y;
-//             ett_vel[i].vy = -ett_vel[i].vy;
-//         } else if (ett->y >= MAX_Y) {
-//             ett->y = MAX_Y;
-//             ett_vel[i].vy = -ett_vel[i].vy;
-//         }
-//     }
-//
-// }
-//
-// void engine_input() {
-//
-// }
-//
-// void engine_draw() {
-//
-//     // collider_sys_draw_debug();
-// }
-//
-// void engine_destroy() {
-//
-// }

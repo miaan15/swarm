@@ -14,7 +14,7 @@ typedef struct {
 
     // for entity stuff
     u32 entity_idx;
-    u32 next;
+    u32 next_collider;
     f32 offset_x, offset_y;
 } collider;
 
