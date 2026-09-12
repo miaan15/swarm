@@ -39,7 +39,7 @@ extern struct sprite_sys sprite_sys;
 void sprite_sys_init(usize profile_cap, usize sprite_cap);
 
 // =============================================================================
-u32 sprite_profile_make(u32 tex, f32 x, f32 y, f32 w, f32 h);
+u32 sprite_profile_create(u32 tex, f32 x, f32 y, f32 w, f32 h);
 [[nodiscard]] sprite_profile sprite_profile_get(usize idx);
 
 // =============================================================================

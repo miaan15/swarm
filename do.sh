@@ -56,7 +56,7 @@ mkdir -p build
 cat << 'EOF'| sed "s|@PROJECT_DIR@|$PROJECT_DIR|g" > build.ninja
 # vars
 cflags = -std=c23 -Wall -Wextra -fsanitize=address,undefined -O0 -g -Isrc -Isrc/engine -Isrc/game -Ivendor/raylib/src
-ldflags = -fsanitize=address,undefined -ldl -lm -lpthread -Lvendor/build/raylib/raylib -lraylib -Wl,-rpath,vendor/build/raylib/raylib
+ldflags = -fsanitize=address,undefined -ldl -lm -lpthread -rdynamic -Lvendor/build/raylib/raylib -lraylib -Wl,-rpath,vendor/build/raylib/raylib
 
 # rules
 rule cc

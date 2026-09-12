@@ -2,6 +2,7 @@
 
 #include "arena.h"
 #include "define.h"
+#include "raylib.h"
 
 // config stuff
 extern f32 screen_width;
@@ -11,6 +12,8 @@ extern u32 tick_per_second;
 
 // var stuff
 extern arena omni_arena;
+
+extern Camera2D camera;
 
 extern arena tick_arena_raw[2];
 extern size_t cur_tick_arena_idx;

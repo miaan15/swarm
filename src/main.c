@@ -26,6 +26,8 @@ u32 tick_per_second = 10;
 // var
 arena omni_arena = {0};
 
+Camera2D camera = {0};
+
 arena tick_arena_raw[2] = { {0}, {0} };
 size_t cur_tick_arena_idx = {0};
 arena *tick_arena = {0};
@@ -64,7 +66,7 @@ void engine_game_reload() {
 
     if (libgame_handle) { dlclose(libgame_handle); }
 
-    libgame_handle = dlopen(libgame_path, RTLD_NOW | RTLD_LOCAL);
+    libgame_handle = dlopen(libgame_path, RTLD_NOW | RTLD_GLOBAL);
     if (!libgame_handle) {
         log_err("engine_game_reload: dlopen error: %s\n", dlerror());
         return;
@@ -99,8 +101,13 @@ int main(void)
     arena_init_in_arena(&tick_arena_raw[1], &omni_arena, 10 << 10 << 10); // 10MB
     tick_arena = &tick_arena_raw[cur_tick_arena_idx];
 
-    // raylib window
+    // raylib
     InitWindow(screen_width, screen_height, "swarm");
+
+    camera.target = (Vector2){ 0, 0 };
+    camera.offset = (Vector2){ screen_width / 2, screen_height / 2 };
+    camera.rotation = 0;
+    camera.zoom = 3;
 
     // engine set up
     draw_sys_init(1e2, 1e5);
@@ -160,13 +167,15 @@ int main(void)
         BeginDrawing();
             ClearBackground(RAYWHITE);
 
+            BeginMode2D(camera);
+                game_draw_fn(); // DRAW
+
+                sprite_sys_draw();
+                draw_present();
+            EndMode2D();
+
             DrawRectangle(0, 0, 110, 40, WHITE);
             DrawFPS(10, 10);
-
-            game_draw_fn(); // DRAW
-
-            sprite_sys_draw();
-            draw_present();
         EndDrawing();
     }
 

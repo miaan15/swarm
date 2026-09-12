@@ -25,7 +25,12 @@ void sprite_sys_init(usize profile_cap, usize sprite_cap) {
 }
 
 // =============================================================================
-u32 sprite_profile_make(u32 tex, f32 x, f32 y, f32 w, f32 h) {
+u32 sprite_profile_create(u32 tex, f32 x, f32 y, f32 w, f32 h) {
+    if (tex == 0 || tex >= draw_sys.tex_len) {
+        log_err("sprite_profile_create(): tex is invalid => tex = stub");
+        tex = 0;
+    }
+
     sprite_sys.prf_arr[sprite_sys.prf_len] = (sprite_profile){ tex, x, y, w, h };
 
     log_debug("Made SpriteProfile [%u]: Texture = [%u]; x = %.0f; y = %.0f; w = %.0f; h = %.0f", sprite_sys.prf_len, tex, x, y, w, h);

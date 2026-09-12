@@ -47,6 +47,7 @@ void entity_destroy(u32 idx);
 
 u32 entity_add_sprite(u32 idx, u32 profile_idx, sprite **r_sprite);
 u32 entity_add_collider(u32 idx, collider **r_collider);
+
 u32 entity_add_effect(u32 idx, u32 effect_type, effect **r_effect);
 
 // =============================================================================

@@ -27,7 +27,7 @@ void draw_sys_init(usize texture_cap, usize drawer_cap) {
     // stub
     draw_sys.tex_len = 1;
 
-    // make error texture`
+    // make error texture
     Image stub_img = GenImageChecked(16, 16, 8, 8, MAGENTA, BLACK);
     Texture stub_tex = LoadTextureFromImage(stub_img);
     SetTextureFilter(stub_tex, TEXTURE_FILTER_POINT);

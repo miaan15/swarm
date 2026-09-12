@@ -3,6 +3,7 @@
 #include "action.h"
 #include "define.h"
 #include "effect.h"
+#include "raylib.h"
 
 // FUNCTIONS
 // =============================================================================
@@ -18,6 +19,7 @@ struct npc_entity_data {
     bool female;
 
     // runtime
+    Vector2 move_velocity;
 };
 
 // INTERACTABLE
