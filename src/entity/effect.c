@@ -2,7 +2,7 @@
 
 #include "context.h"
 #include "log.h"
-#include "proxy.h"
+#include <assert.h>
 
 struct effect_sys effect_sys = {0};
 
@@ -19,6 +19,7 @@ void effect_sys_init(usize cap) {
 u32 effect_create(u32 type, effect **r_effect) {
     if (effect_sys.len >= effect_sys.cap) {
         log_err("effect_create(): too much effects => stub");
+        assert(false);
         return 0;
     }
 
@@ -63,9 +64,10 @@ void effect_destroy(u32 idx) {
     log_debug("Destroyed Effect [%u]", idx);
 }
 
-[[nodiscard]] effect *effect_get(usize idx) {
+[[nodiscard]] effect *effect_get(u32 idx) {
     if (idx == 0 || idx >= effect_sys.max_idx) {
         log_err("effect_get(): effect invalid => stub");
+        assert(false);
         return &effect_sys.effect_pool[idx];
     }
     return &effect_sys.effect_pool[idx];
@@ -77,6 +79,6 @@ void effect_sys_update() {
         effect *eff = effect_get(i);
         if (eff->pool_flag != ALIVE_POOL_FLAG) continue;
 
-        effect_handle_fn(eff);
+        fn_handle_effect(eff);
     }
 }

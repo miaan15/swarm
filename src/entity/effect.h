@@ -41,7 +41,7 @@ void effect_sys_init(usize cap);
 u32 effect_create(u32 type, effect **r_effect);
 void effect_destroy(u32 idx);
 
-[[nodiscard]] effect *effect_get(usize idx);
+[[nodiscard]] effect *effect_get(u32 idx);
 
 // =============================================================================
 void effect_sys_update();

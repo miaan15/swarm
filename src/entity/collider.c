@@ -36,6 +36,7 @@ void collider_sys_init(usize cap, f32 fat_aabb_offset) {
 u32 collider_create(collider **r_collider) {
     if (collider_sys.collider_len >= collider_sys.collider_cap) {
         log_err("collider_create(): too much collideress => stub");
+        assert(false);
         return 0;
     }
 
@@ -54,7 +55,7 @@ u32 collider_create(collider **r_collider) {
     // setup collider
     memset(col, 0, sizeof(collider));
     col->pool_flag = ALIVE_POOL_FLAG;
-    col->pool_idx = idx;
+    col->idx = idx;
 
     log_debug("Created Collider [%u]", idx);
 
@@ -86,6 +87,7 @@ void collider_destroy(u32 idx) {
 [[nodiscard]] collider *collider_get(u32 idx) {
     if (idx == 0 || idx >= collider_sys.collider_max_idx) {
         log_err("collider_get(): collider invalid => stub");
+        assert(false);
         return &collider_sys.collider_pool[idx];
     }
     return &collider_sys.collider_pool[idx];
@@ -94,10 +96,12 @@ void collider_destroy(u32 idx) {
 void collider_add_to_tree(u32 idx) {
     if (idx == 0 || idx >= collider_sys.collider_max_idx) {
         log_err("collider_add_tree(): collider invalid");
+        assert(false);
         return;
     }
     if (collider_sys.collider_pool[idx].pool_flag != ALIVE_POOL_FLAG) {
         log_err("collider_add_tree(): collider is dead");
+        assert(false);
         return;
     }
 
