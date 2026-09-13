@@ -16,6 +16,8 @@ typedef struct {
     f32 x, y, w, h;
     i8 z;
 
+    bool show;
+
     // for entity stuff
     u32 entity_idx;
     u32 next_sprite;

@@ -48,6 +48,8 @@ u32 entity_create(f32 x, f32 y, entity **r_entity) {
     ett->pool_flag = ALIVE_POOL_FLAG;
     ett->idx = idx;
 
+    ett->logic_flag |= (1 << _ENTITY_LOGIC_FLAG_CREATED);
+
     entity_pos_set_position(idx, x, y);
     entity_pos_set_velocity(idx, 0, 0);
 
@@ -301,10 +303,11 @@ void entity_sys_update() {
         entity_pos_soa *soa = &entity_sys.pos_soa_pool[ii];
 
         // sneak in some bounds update
-        f32 min_x = 0, min_y = 0, max_x = 0, max_y = 0;
+        f32 min_x = INFINITY, min_y = INFINITY, max_x = -INFINITY, max_y = -INFINITY;
 
         // if the entity moved
         if (((ett->logic_flag >> _ENTITY_LOGIC_FLAG_MOVED) & 1)
+            || ((ett->logic_flag >> _ENTITY_LOGIC_FLAG_CREATED) & 1)
             || soa->vx[ij] != 0 || soa->vy[ij] != 0) {
 
             f32 x = soa->x[ij], y = soa->y[ij];
@@ -361,7 +364,36 @@ void entity_sys_update() {
             }
 
             // de-flag
+            ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_CREATED);
             ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_MOVED);
+        }
+
+        // culling sprite draw
+        {
+            f32 camera_bounds_x = camera_x - screen_width * camera_zoom / 2;
+            f32 camera_bounds_y = camera_y - screen_height * camera_zoom / 2;
+            f32 camera_bounds_w = screen_width * camera_zoom;
+            f32 camera_bounds_h = screen_height * camera_zoom;
+
+            u32 *ett_in_arr; usize ett_in_arr_len;
+            entity_query(camera_bounds_x, camera_bounds_y, camera_bounds_w, camera_bounds_h,
+                         &ett_in_arr, &ett_in_arr_len);
+
+            for (usize i = 0; i < ett_in_arr_len; ++i) {
+                u32 ett_idx = ett_in_arr[i];
+                assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
+                entity *ett = &entity_sys.entity_pool[ett_idx];
+
+                // show sprites
+                for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
+                    sprite *spr = sprite_get(sprite_idx);
+                    assert(spr->entity_idx == i);
+
+                    spr->show = true;
+
+                    sprite_idx = spr->next_sprite;
+                }
+            }
         }
     }
 }
@@ -419,7 +451,6 @@ void entity_chunk_remv(u32 ett_idx) {
         assert(ett->next_in_chunk < entity_sys.entity_max_idx);
         entity_sys.entity_pool[ett->next_in_chunk].pre_in_chunk = ett->pre_in_chunk;
     }
-
 
     // update entity
     ett->next_in_chunk = ett->pre_in_chunk = 0;

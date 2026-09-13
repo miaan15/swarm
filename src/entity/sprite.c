@@ -128,18 +128,23 @@ sprite *sprite_get(u32 idx) {
 // =============================================================================
 void sprite_sys_draw() {
     for (usize i = 1; i < sprite_sys.sprite_max_idx; ++i) {
-        sprite spr = sprite_sys.sprite_pool[i];
-        if (spr.pool_flag != ALIVE_POOL_FLAG) continue;
+        sprite *spr = &sprite_sys.sprite_pool[i];
+        if (spr->pool_flag != ALIVE_POOL_FLAG) continue;
 
-        // setup drawer
-        drawer *drr = draw_make();
-        drr->tex = spr.tex;
-        memcpy(&drr->sx, &spr.sx, 4 * sizeof(f32));
-        drr->dx = spr.x;
-        drr->dy = spr.y;
-        drr->dw = spr.w;
-        drr->dh = spr.h;
-        draw_meta_set_y(&drr->meta, drr->dy);
-        draw_meta_set_z(&drr->meta, spr.z);
+        if (spr->show) {
+            // setup drawer
+            drawer *drr = draw_make();
+            drr->tex = spr->tex;
+            memcpy(&drr->sx, &spr->sx, 4 * sizeof(f32));
+            drr->dx = spr->x;
+            drr->dy = spr->y;
+            drr->dw = spr->w;
+            drr->dh = spr->h;
+            draw_meta_set_y(&drr->meta, drr->dy);
+            draw_meta_set_z(&drr->meta, spr->z);
+
+            // hid again
+            spr->show = false;
+        }
     }
 }

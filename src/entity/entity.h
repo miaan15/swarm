@@ -7,7 +7,8 @@
 #include "sprite.h"
 
 enum {
-    _ENTITY_LOGIC_FLAG_MOVED
+    _ENTITY_LOGIC_FLAG_CREATED,
+    _ENTITY_LOGIC_FLAG_MOVED,
 };
 typedef struct {
     u32 pool_flag;
