@@ -67,5 +67,3 @@ void collider_add_to_tree(u32 idx);
 
 // =============================================================================
 void collider_sys_update();
-
-void collider_sys_draw_debug();

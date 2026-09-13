@@ -10,8 +10,8 @@ typedef struct {
 
 struct action_sys {
     action *action_buffer;
-    usize cap;
-    usize len;
+    usize action_cap;
+    usize action_len;
 };
 extern struct action_sys action_sys;
 

@@ -22,15 +22,12 @@ typedef struct {
     f32 damage;
 } effect;
 
-typedef struct {
-} effect_entity_owned;
-
 struct effect_sys {
     effect *effect_pool;
-    usize cap;
-    usize head;
-    usize max_idx;
-    u32 len;
+    usize effect_cap;
+    usize effect_head;
+    usize effect_max_idx;
+    u32 effect_len;
 };
 extern struct effect_sys effect_sys;
 

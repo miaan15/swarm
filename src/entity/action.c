@@ -9,19 +9,19 @@ struct action_sys action_sys = {0};
 // =============================================================================
 void action_sys_init(usize cap) {
     action_sys.action_buffer = arena_alloc(&omni_arena, cap * sizeof(action));
-    action_sys.cap = cap;
-    action_sys.len = 0;
+    action_sys.action_cap = cap;
+    action_sys.action_len = 0;
 }
 
 // =============================================================================
 void action_make(u32 from, u32 to, u32 type, u32 *data_3) {
-    if (action_sys.len >= action_sys.cap) {
+    if (action_sys.action_len >= action_sys.action_cap) {
         log_err("action_make(): too much actions");
         assert(false);
         return;
     }
 
-    action *act = &action_sys.action_buffer[action_sys.len++];
+    action *act = &action_sys.action_buffer[action_sys.action_len++];
     act->from = from;
     act->to = to;
     act->type = type;
@@ -32,11 +32,11 @@ void action_make(u32 from, u32 to, u32 type, u32 *data_3) {
 
 // =============================================================================
 void action_sys_update() {
-    for (usize i = 0; i < action_sys.len; ++i) {
+    for (usize i = 0; i < action_sys.action_len; ++i) {
         action* act = &action_sys.action_buffer[i];
 
         fn_handle_action(act);
     }
 
-    action_sys.len = 0;
+    action_sys.action_len = 0;
 }

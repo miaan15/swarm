@@ -3,6 +3,7 @@
 #include "context.h"
 #include "draw.h"
 #include "entity.h"
+#include <raylib.h>
 
 void game_init() {
     // arena alloc

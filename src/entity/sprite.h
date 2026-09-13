@@ -2,7 +2,6 @@
 
 #include "define.h"
 
-// TODO use QuadTree to culling
 typedef struct {
     u32 tex;
     f32 x, y, w, h;
@@ -14,7 +13,7 @@ typedef struct {
 
     u32 tex;
     f32 sx, sy, sw, sh;
-    f32 x, y;
+    f32 x, y, w, h;
     i8 z;
 
     // for entity stuff
@@ -29,10 +28,10 @@ struct sprite_sys {
     usize profile_len;
 
     sprite *sprite_pool;
-    usize cap;
-    usize head;
-    usize max_idx;
-    u32 len;
+    usize sprite_cap;
+    usize sprite_head;
+    usize sprite_max_idx;
+    u32 sprite_len;
 };
 extern struct sprite_sys sprite_sys;
 

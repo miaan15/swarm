@@ -34,6 +34,19 @@ static inline void arena_destroy(arena *ar) {
     return ptr;
 }
 
+[[nodiscard]] static inline void *arena_alloc_raw_aligned(arena *ar, usize size, usize align) {
+    usize offs = align_up(ar->offs, align);
+    if (offs + size > ar->cap) { return NULL; }
+    ar->offs = offs + size;
+    return (char *)ar->raw + offs;
+}
+
+[[nodiscard]] static inline void *arena_alloc_aligned(arena *ar, usize size, usize align) {
+    void *ptr = arena_alloc_raw_aligned(ar, size, align);
+    memset(ptr, 0, size);
+    return ptr;
+}
+
 static inline void arena_reset(arena *ar) {
     ar->offs = 0;
 }

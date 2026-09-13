@@ -8,7 +8,6 @@
 
 struct collider_sys collider_sys = {0};
 
-void debug_print_collider_tree();
 // =============================================================================
 u32 collider_tree_insert(u32 collider_idx, bool create_new_node);
 void collider_tree_remove(u32 node_idx, bool destroy_node);
@@ -357,10 +356,6 @@ u32 collider_tree_insert(u32 collider_idx, bool create_new_node) {
         ud_idx = collider_node_get(ud_idx)->parent;
     }
 
-    // log_info("tree after INSERT node[%u]", insert_idx);
-    // debug_print_collider_tree();
-    // printf("\n");
-
     return insert_idx;
 }
 
@@ -410,11 +405,7 @@ void collider_tree_remove(u32 node_idx, bool destroy_node) {
 
         cur_idx = remv_sib_idx;
     }
-    //
-    // log_info("tree just-destroy-stuff REMOVE [%u]", node_idx);
-    // debug_print_collider_tree();
-    // printf("\n");
-    //
+
     // update parents' aabb upward and rebalance tree
     while (cur_idx != 0) {
         if (cur_idx == collider_sys.tree_root) {
@@ -467,10 +458,6 @@ void collider_tree_remove(u32 node_idx, bool destroy_node) {
             collider_node_recal_aabb_height(cur_idx);
         }
     }
-
-    // log_info("tree after REMOVE [%u]", node_idx);
-    // debug_print_collider_tree();
-    // printf("\n");
 }
 
 // =============================================================================
@@ -490,95 +477,4 @@ void collider_sys_update() {
             }
         }
     }
-}
-
-void collider_sys_draw_node_debug(u32 node_idx, u32 max_height) {
-    collider_node *node;
-    Rectangle rect;
-    Color color;
-
-    if (node_idx == 0) return;
-
-    node = collider_node_get(node_idx);
-    if (!node) return;
-
-    color.r = 255;
-    color.g = 200;
-    color.b = 200;
-    color.a = 50;
-
-    rect.x = node->x;
-    rect.y = node->y;
-    rect.width = node->w;
-    rect.height = node->h;
-
-    if (rect.width < 1.0f)  rect.width = 1.0f;
-    if (rect.height < 1.0f) rect.height = 1.0f;
-
-    DrawRectangleLinesEx(rect, 1.0f, color);
-
-    if (node->collider_idx != 0) {
-        collider *col = collider_get(node->collider_idx);
-        rect.x = col->x;
-        rect.y = col->y;
-        rect.width = col->w;
-        rect.height = col->h;
-        DrawRectangleLinesEx(rect, 2.0f, GREEN);
-    }
-
-    collider_sys_draw_node_debug(node->child[0], max_height);
-    collider_sys_draw_node_debug(node->child[1], max_height);
-}
-
-void collider_sys_draw_debug(void) {
-    if (collider_sys.tree_root == 0) return;
-
-    collider_node *root = collider_node_get(collider_sys.tree_root);
-    if (!root) return;
-
-    u32 max_height = root->height;
-
-    collider_sys_draw_node_debug(collider_sys.tree_root, max_height);
-}
-
-void print_collider_tree_recursive(u32 idx, char *prefix, bool is_left, bool is_root) {
-    if (idx == 0) return;
-
-    collider_node *node = collider_node_get(idx);
-    if (!node) return;
-
-    // Print current line prefix and branch connector
-    printf("%s", prefix);
-    if (!is_root) {
-        printf("%s", is_left ? "├── " : "└── ");
-    }
-    printf("%u\n", idx);
-
-    // Compute prefix for child subtrees
-    char next_prefix[256];
-    if (is_root) {
-        next_prefix[0] = '\0';
-    } else {
-        snprintf(next_prefix, sizeof(next_prefix), "%s%s", prefix, is_left ? "│   " : "    ");
-    }
-
-    u32 left = node->child[0];
-    u32 right = node->child[1];
-
-    if (left != 0 && right != 0) {
-        print_collider_tree_recursive(left, next_prefix, true, false);
-        print_collider_tree_recursive(right, next_prefix, false, false);
-    } else if (left != 0) {
-        print_collider_tree_recursive(left, next_prefix, false, false);
-    } else if (right != 0) {
-        print_collider_tree_recursive(right, next_prefix, false, false);
-    }
-}
-
-void debug_print_collider_tree() {
-    if (collider_sys.tree_root == 0) {
-        printf("(empty tree)\n");
-        return;
-    }
-    print_collider_tree_recursive(collider_sys.tree_root, "", false, true);
 }
