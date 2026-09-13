@@ -6,9 +6,9 @@
 
 void game_init() {
     // arena alloc
-    arena_init(&omni_arena, 100 << 10 << 10); // 100MB
-    arena_init_in_arena(&tick_arena_raw[0], &omni_arena, 10 << 10 << 10); // 10MB
-    arena_init_in_arena(&tick_arena_raw[1], &omni_arena, 10 << 10 << 10); // 10MB
+    arena_init(&omni_arena, 500 << 10 << 10); // 500MB
+    arena_init_in_arena(&tick_arena_raw[0], &omni_arena, 50 << 10 << 10); // 50MB
+    arena_init_in_arena(&tick_arena_raw[1], &omni_arena, 50 << 10 << 10); // 50MB
     tick_arena = &tick_arena_raw[cur_tick_arena_idx];
 
     // engine set up
@@ -18,10 +18,8 @@ void game_init() {
     collider_sys_init(1e5, 30.0f);
     effect_sys_init(1e5);
     entity_sys_init(1e5);
-    
-    action_sys_init(1e5);
 
-    entity_create(nullptr);
+    action_sys_init(1e5);
 }
 
 void game_input() { }
