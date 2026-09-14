@@ -131,7 +131,7 @@ void sprite_sys_draw() {
         sprite *spr = &sprite_sys.sprite_pool[i];
         if (spr->pool_flag != ALIVE_POOL_FLAG) continue;
 
-        if (spr->show) {
+        if (spr->show || true) { // FIXME
             // setup drawer
             drawer *drr = draw_make();
             drr->tex = spr->tex;

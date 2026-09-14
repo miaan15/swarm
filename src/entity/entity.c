@@ -368,33 +368,35 @@ void entity_sys_update() {
             ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_MOVED);
         }
 
-        // culling sprite draw
-        {
-            f32 camera_bounds_x = camera_x - screen_width * camera_zoom / 2;
-            f32 camera_bounds_y = camera_y - screen_height * camera_zoom / 2;
-            f32 camera_bounds_w = screen_width * camera_zoom;
-            f32 camera_bounds_h = screen_height * camera_zoom;
-
-            u32 *ett_in_arr; usize ett_in_arr_len;
-            entity_query(camera_bounds_x, camera_bounds_y, camera_bounds_w, camera_bounds_h,
-                         &ett_in_arr, &ett_in_arr_len);
-
-            for (usize i = 0; i < ett_in_arr_len; ++i) {
-                u32 ett_idx = ett_in_arr[i];
-                assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
-                entity *ett = &entity_sys.entity_pool[ett_idx];
-
-                // show sprites
-                for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
-                    sprite *spr = sprite_get(sprite_idx);
-                    assert(spr->entity_idx == i);
-
-                    spr->show = true;
-
-                    sprite_idx = spr->next_sprite;
-                }
-            }
-        }
+        // FIXME this should be in frame update
+        // // culling sprite draw
+        // {
+        //     f32 camera_bounds_x = camera_x - screen_width * camera_zoom / 2;
+        //     f32 camera_bounds_y = camera_y - screen_height * camera_zoom / 2;
+        //     f32 camera_bounds_w = screen_width * camera_zoom;
+        //     f32 camera_bounds_h = screen_height * camera_zoom;
+        //
+        //     u32 *ett_in_arr; usize ett_in_arr_len;
+        //     entity_query(camera_bounds_x, camera_bounds_y, camera_bounds_w, camera_bounds_h,
+        //                  &ett_in_arr, &ett_in_arr_len);
+        //
+        //     for (usize i = 0; i < ett_in_arr_len; ++i) {
+        //         u32 ett_idx = ett_in_arr[i];
+        //         assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
+        //         entity *ett = &entity_sys.entity_pool[ett_idx];
+        //
+        //         // show sprites
+        //         for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
+        //             sprite *spr = sprite_get(sprite_idx);
+        //             assert(spr->entity_idx == ett_idx);
+        //
+        //             spr->show = true;
+        //             log_info("%u: %u", time_ms, sprite_idx);
+        //
+        //             sprite_idx = spr->next_sprite;
+        //         }
+        //     }
+        // }
     }
 }
 
