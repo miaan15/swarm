@@ -174,9 +174,9 @@ int main(void)
                 game_draw();
 
                 // systems draw
-                SET_CLOCK(CLOCK_START_SPRITE_SYS);
-                sprite_sys_draw();
-                SET_CLOCK(CLOCK_END_SPRITE_SYS);
+                SET_CLOCK(CLOCK_START_PORTRAIT_SYS);
+                portrait_sys_draw();
+                SET_CLOCK(CLOCK_END_PORTRAIT_SYS);
 
                 SET_CLOCK(CLOCK_START_DRAW);
                 draw_present();
@@ -197,7 +197,7 @@ int main(void)
                 [CLOCK_START_ENTITY_POS_UPDATE]   = "Entity Pos Update",
                 [CLOCK_START_ENTITY_COMPS_UPDATE] = "Entity Comps Update",
                 [CLOCK_START_COLLIDER_SYS]        = "Collider Sys",
-                [CLOCK_START_SPRITE_SYS]          = "Sprite Sys",
+                [CLOCK_START_PORTRAIT_SYS]          = "Portrait Sys",
                 [CLOCK_START_DRAW]                = "Draw",
             };
             for (int i = 0; i < 16; i += 2) {

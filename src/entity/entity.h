@@ -4,7 +4,7 @@
 #include "collider.h"
 #include "define.h"
 #include "effect.h"
-#include "sprite.h"
+#include "portrait.h"
 
 enum {
     _ENTITY_LOGIC_FLAG_CREATED,
@@ -16,9 +16,9 @@ typedef struct {
 
     u8 logic_flag;
 
-    // sprite
-    u32 sprite_begin;
-    u32 sprite_len;
+    // portrait
+    u32 portrait_begin;
+    u32 portrait_len;
 
     // collider
     u32 collider_begin;
@@ -65,7 +65,7 @@ void entity_destroy(u32 idx);
 [[nodiscard]] entity *entity_get(u32 idx);
 [[nodiscard]] bool entity_alive(u32 idx);
 
-u32 entity_add_sprite(u32 idx, u32 profile_idx, sprite **r_sprite);
+u32 entity_add_portrait(u32 idx, u32 profile_idx, portrait **r_portrait);
 u32 entity_add_collider(u32 idx, collider **r_collider);
 
 u32 entity_add_effect(u32 idx, u32 effect_type, effect **r_effect);

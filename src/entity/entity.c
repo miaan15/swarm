@@ -77,14 +77,14 @@ void entity_destroy(u32 idx) {
     //
     entity_pos_set_velocity(idx, 0, 0);
 
-    // destroy all sprites
-    for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
-        sprite *spr = sprite_get(sprite_idx);
-        assert(spr->entity_idx == idx);
+    // destroy all portraits
+    for (u32 portrait_idx = ett->portrait_begin; portrait_idx != 0;) {
+        portrait *potr = portrait_get(portrait_idx);
+        assert(potr->entity_idx == idx);
 
-        sprite_destroy(sprite_idx);
+        portrait_destroy(portrait_idx);
 
-        sprite_idx = spr->next_in_entity;
+        portrait_idx = potr->next_in_entity;
     }
 
     // destroy all colliders
@@ -128,24 +128,24 @@ bool entity_alive(u32 idx) {
     return entity_sys.entity_pool[idx].pool_flag == ALIVE_POOL_FLAG;
 }
 
-u32 entity_add_sprite(u32 idx, u32 profile_idx, sprite **r_sprite) {
+u32 entity_add_portrait(u32 idx, u32 profile_idx, portrait **r_portrait) {
     if (idx == 0 || idx >= entity_sys.entity_max_idx) {
-        log_err("entity_add_sprite(): Entity [%u] invalid => stub", idx);
+        log_err("entity_add_portrait(): Entity [%u] invalid => stub", idx);
         assert(false);
         return 0;
     }
 
-    u32 spr_idx = sprite_create(profile_idx, r_sprite);
+    u32 potr_idx = portrait_create(profile_idx, r_portrait);
 
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_sprite)->next_in_entity = ett->sprite_begin;
-    ett->sprite_begin = spr_idx;
+    (*r_portrait)->next_in_entity = ett->portrait_begin;
+    ett->portrait_begin = potr_idx;
 
-    (*r_sprite)->entity_idx = idx;
+    (*r_portrait)->entity_idx = idx;
 
-    log_debug("Added Sprite [%u] to Entity [%u]", spr_idx, idx);
+    log_debug("Added Portrait [%u] to Entity [%u]", potr_idx, idx);
 
-    return spr_idx;
+    return potr_idx;
 }
 
 u32 entity_add_collider(u32 idx, collider **r_collider) {
@@ -315,21 +315,21 @@ void entity_sys_update() {
 
             f32 x = soa->x[ij], y = soa->y[ij];
 
-            // update all sprites
-            for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
-                sprite *spr = sprite_get(sprite_idx);
-                assert(spr->entity_idx == i);
+            // update all portraits
+            for (u32 portrait_idx = ett->portrait_begin; portrait_idx != 0;) {
+                portrait *potr = portrait_get(portrait_idx);
+                assert(potr->entity_idx == i);
 
-                spr->x = x + spr->offset_x;
-                spr->y = y + spr->offset_y;
+                potr->x = x + potr->offset_x;
+                potr->y = y + potr->offset_y;
 
-                sprite_idx = spr->next_in_entity;
+                portrait_idx = potr->next_in_entity;
 
                 // bounds update
-                min_x = spr->x < min_x ? spr->x : min_x;
-                min_y = spr->y < min_y ? spr->y : min_y;
-                max_x = spr->x + spr->w > max_x ? spr->x + spr->w : max_x;
-                max_y = spr->y + spr->h > max_y ? spr->y + spr->h : max_y;
+                min_x = potr->x < min_x ? potr->x : min_x;
+                min_y = potr->y < min_y ? potr->y : min_y;
+                max_x = potr->x + potr->w > max_x ? potr->x + potr->w : max_x;
+                max_y = potr->y + potr->h > max_y ? potr->y + potr->h : max_y;
             }
 
             // update all colliders
@@ -373,7 +373,7 @@ void entity_sys_update() {
         SET_CLOCK(CLOCK_END_ENTITY_COMPS_UPDATE);
 
         // FIXME this should be in frame update
-        // // culling sprite draw
+        // // culling portrait draw
         // {
         //     f32 camera_bounds_x = camera_x - screen_width * camera_zoom / 2;
         //     f32 camera_bounds_y = camera_y - screen_height * camera_zoom / 2;
@@ -389,15 +389,15 @@ void entity_sys_update() {
         //         assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
         //         entity *ett = &entity_sys.entity_pool[ett_idx];
         //
-        //         // show sprites
-        //         for (u32 sprite_idx = ett->sprite_begin; sprite_idx != 0;) {
-        //             sprite *spr = sprite_get(sprite_idx);
-        //             assert(spr->entity_idx == ett_idx);
+        //         // show portraits
+        //         for (u32 portrait_idx = ett->portrait_begin; portrait_idx != 0;) {
+        //             portrait *potr = portrait_get(portrait_idx);
+        //             assert(potr->entity_idx == ett_idx);
         //
-        //             spr->show = true;
-        //             log_info("%u: %u", time_ms, sprite_idx);
+        //             potr->show = true;
+        //             log_info("%u: %u", time_ms, portrait_idx);
         //
-        //             sprite_idx = spr->next_sprite;
+        //             portrait_idx = potr->next_portrait;
         //         }
         //     }
         // }

@@ -53,29 +53,29 @@ void chunk_add_entity(u32 ett_idx) {
     chunk_cal_pos(x, y, &ett->chunk_x, &ett->chunk_y);
 }
 
-void chunk_add_sprite(u32 spr_idx) {
-    if (spr_idx == 0 || spr_idx > sprite_sys.sprite_max_idx) {
-        log_err("chunk_add_sprite(): Sprite [%u] is invalid", spr_idx);
+void chunk_add_portrait(u32 potr_idx) {
+    if (potr_idx == 0 || potr_idx > portrait_sys.portrait_max_idx) {
+        log_err("chunk_add_portrait(): Portrait [%u] is invalid", potr_idx);
         return;
     }
 
-    sprite *spr = sprite_get(spr_idx);
+    portrait *potr = portrait_get(potr_idx);
 
-    usize idx = chunk_open(spr->x + (spr->w / 2), spr->y + (spr->h / 2));
+    usize idx = chunk_open(potr->x + (potr->w / 2), potr->y + (potr->h / 2));
     chunk_entry *chunk = &chunk_sys.chunk_map[idx];
 
     // linking
-    spr->next_in_chunk = chunk->sprite_begin;
-    spr->pre_in_chunk = 0;
+    potr->next_in_chunk = chunk->portrait_begin;
+    potr->pre_in_chunk = 0;
 
-    if (chunk->sprite_begin != 0) {
-        sprite_get(chunk->sprite_begin)->pre_in_chunk = spr_idx;
+    if (chunk->portrait_begin != 0) {
+        portrait_get(chunk->portrait_begin)->pre_in_chunk = potr_idx;
     }
 
-    chunk->sprite_begin = spr_idx;
+    chunk->portrait_begin = potr_idx;
 
     // set
-    chunk_cal_pos(spr->x + (spr->w / 2), spr->y + (spr->h / 2), &spr->chunk_x, &spr->chunk_y);
+    chunk_cal_pos(potr->x + (potr->w / 2), potr->y + (potr->h / 2), &potr->chunk_x, &potr->chunk_y);
 }
 
 void chunk_add_collider(u32 col_idx) {
@@ -131,31 +131,31 @@ void chunk_remv_entity(u32 ett_idx) {
     ett->next_in_chunk = 0;
 }
 
-void chunk_remv_sprite(u32 spr_idx) {
-    if (spr_idx == 0 || spr_idx > sprite_sys.sprite_max_idx) {
-        log_err("chunk_remv_sprite(): Sprite [%u] is invalid", spr_idx);
+void chunk_remv_portrait(u32 potr_idx) {
+    if (potr_idx == 0 || potr_idx > portrait_sys.portrait_max_idx) {
+        log_err("chunk_remv_portrait(): Portrait [%u] is invalid", potr_idx);
         return;
     }
 
-    sprite *spr = sprite_get(spr_idx);
+    portrait *potr = portrait_get(potr_idx);
 
-    usize idx = chunk_find(spr->chunk_x, spr->chunk_y);
+    usize idx = chunk_find(potr->chunk_x, potr->chunk_y);
     chunk_entry *chunk = &chunk_sys.chunk_map[idx];
 
     // link pre
-    if (spr->pre_in_chunk != 0) {
-        sprite_get(spr->pre_in_chunk)->next_in_chunk = spr->next_in_chunk;
-    } else if (chunk->sprite_begin == spr_idx) {
-        chunk->sprite_begin = spr->next_in_chunk;
+    if (potr->pre_in_chunk != 0) {
+        portrait_get(potr->pre_in_chunk)->next_in_chunk = potr->next_in_chunk;
+    } else if (chunk->portrait_begin == potr_idx) {
+        chunk->portrait_begin = potr->next_in_chunk;
     }
 
     // link next
-    if (spr->next_in_chunk != 0) {
-        sprite_get(spr->next_in_chunk)->pre_in_chunk = spr->pre_in_chunk;
+    if (potr->next_in_chunk != 0) {
+        portrait_get(potr->next_in_chunk)->pre_in_chunk = potr->pre_in_chunk;
     }
 
-    spr->pre_in_chunk = 0;
-    spr->next_in_chunk = 0;
+    potr->pre_in_chunk = 0;
+    potr->next_in_chunk = 0;
 }
 
 void chunk_remv_collider(u32 col_idx) {
@@ -206,20 +206,20 @@ void chunk_update_entity(u32 ett_idx) {
     }
 }
 
-void chunk_update_sprite(u32 spr_idx) {
-    if (spr_idx == 0 || spr_idx > sprite_sys.sprite_max_idx) {
-        log_err("chunk_update_sprite(): Sprite [%u] is invalid", spr_idx);
+void chunk_update_portrait(u32 potr_idx) {
+    if (potr_idx == 0 || potr_idx > portrait_sys.portrait_max_idx) {
+        log_err("chunk_update_portrait(): Portrait [%u] is invalid", potr_idx);
         return;
     }
 
-    sprite *spr = sprite_get(spr_idx);
+    portrait *potr = portrait_get(potr_idx);
 
     i32 cx, cy;
-    chunk_cal_pos(spr->x + (spr->w / 2.0f), spr->y + (spr->h / 2.0f), &cx, &cy);
+    chunk_cal_pos(potr->x + (potr->w / 2.0f), potr->y + (potr->h / 2.0f), &cx, &cy);
 
-    if (cx != spr->chunk_x || cy != spr->chunk_y) {
-        chunk_remv_sprite(spr_idx);
-        chunk_add_sprite(spr_idx);
+    if (cx != potr->chunk_x || cy != potr->chunk_y) {
+        chunk_remv_portrait(potr_idx);
+        chunk_add_portrait(potr_idx);
     }
 }
 
@@ -277,8 +277,8 @@ void chunk_query_entity(f32 x, f32 y, f32 w, f32 h, u32 **ett_list, usize *ett_l
     *ett_list_len = len;
 }
 
-void chunk_query_sprite(f32 x, f32 y, f32 w, f32 h, u32 **spr_list, usize *spr_list_len) {
-    if (spr_list == nullptr || spr_list_len == nullptr) return;
+void chunk_query_portrait(f32 x, f32 y, f32 w, f32 h, u32 **potr_list, usize *potr_list_len) {
+    if (potr_list == nullptr || potr_list_len == nullptr) return;
 
     u32 *list = nullptr;
     usize len = 0, cap = 0;
@@ -294,10 +294,10 @@ void chunk_query_sprite(f32 x, f32 y, f32 w, f32 h, u32 **spr_list, usize *spr_l
             if (idx == 0) continue;
 
             chunk_entry *chunk = &chunk_sys.chunk_map[idx];
-            u32 spr_idx = chunk->sprite_begin;
+            u32 potr_idx = chunk->portrait_begin;
 
-            while (spr_idx != 0) {
-                sprite *spr = sprite_get(spr_idx);
+            while (potr_idx != 0) {
+                portrait *potr = portrait_get(potr_idx);
 
                 if (len >= cap) {
                     cap = (cap < 4) ? 4 : cap * 2;
@@ -308,14 +308,14 @@ void chunk_query_sprite(f32 x, f32 y, f32 w, f32 h, u32 **spr_list, usize *spr_l
                     list = _new;
                 }
 
-                list[len++] = spr_idx;
-                spr_idx = spr->next_in_chunk;
+                list[len++] = potr_idx;
+                potr_idx = potr->next_in_chunk;
             }
         }
     }
 
-    *spr_list = list;
-    *spr_list_len = len;
+    *potr_list = list;
+    *potr_list_len = len;
 }
 
 void chunk_query_collider(f32 x, f32 y, f32 w, f32 h, u32 **col_list, usize *col_list_len) {

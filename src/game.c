@@ -17,7 +17,7 @@ enum {
     RACE_HUMAN,
     RACE_ELF,
     RACE_DWARD,
-}; // get race's sprite profile by "$enum * 2 + [female]?"
+}; // get race's portrait profile by "$enum * 2 + [female]?"
 
 constexpr Vector2 HAIR_OFFSET_BY_RACES[10] = { {0}, {0}, {0, 3} };
 
@@ -31,7 +31,7 @@ void game_init() {
     // engine set up
     draw_sys_init(1e2, 1e5);
 
-    sprite_sys_init(1e5, 1e5);
+    portrait_sys_init(1e5, 1e5);
     collider_sys_init(1e5, 30.0f);
     effect_sys_init(1e5);
     entity_sys_init(1e5);
@@ -42,18 +42,18 @@ void game_init() {
     texture_load("img/char_base.png"); // 1
     texture_load("img/char_hair.png"); // 2
 
-    // sprite profile load
-    sprite_profile_create(1,   0, 0, 32, 32); // 1: human - male
-    sprite_profile_create(1,  32, 0, 32, 32); // 2: human - female
-    sprite_profile_create(1,  64, 0, 32, 32); // 3: elf - male
-    sprite_profile_create(1,  96, 0, 32, 32); // 4: elf - female
-    sprite_profile_create(1, 128, 0, 32, 32); // 5: dwarf - male
-    sprite_profile_create(1, 160, 0, 32, 32); // 6: dwarf - female
+    // portrait profile load
+    portrait_profile_create(1,   0, 0, 32, 32); // 1: human - male
+    portrait_profile_create(1,  32, 0, 32, 32); // 2: human - female
+    portrait_profile_create(1,  64, 0, 32, 32); // 3: elf - male
+    portrait_profile_create(1,  96, 0, 32, 32); // 4: elf - female
+    portrait_profile_create(1, 128, 0, 32, 32); // 5: dwarf - male
+    portrait_profile_create(1, 160, 0, 32, 32); // 6: dwarf - female
     // +6
-    sprite_profile_create(2,   0, 0, 32, 32); // 1: male hair
-    sprite_profile_create(2,  32, 0, 32, 32); // 2: male hair
-    sprite_profile_create(2,  64, 0, 32, 32); // 3: female hair
-    sprite_profile_create(2,  96, 0, 32, 32); // 4: female hair
+    portrait_profile_create(2,   0, 0, 32, 32); // 1: male hair
+    portrait_profile_create(2,  32, 0, 32, 32); // 2: male hair
+    portrait_profile_create(2,  64, 0, 32, 32); // 3: female hair
+    portrait_profile_create(2,  96, 0, 32, 32); // 4: female hair
 
     // spawn npcs
     for (usize i = 0; i < NPC_COUNT; ++i) {
@@ -67,10 +67,10 @@ void game_init() {
         entity *ett;
         u32 ett_idx = entity_create(x, y, &ett);
 
-        sprite *spr;
-        entity_add_sprite(ett_idx, profile_idx, &spr);
-        spr->offset_x = -16;
-        spr->offset_y = -16;
+        portrait *potr;
+        entity_add_portrait(ett_idx, profile_idx, &potr);
+        potr->offset_x = -16;
+        potr->offset_y = -16;
 
         collider *col;
         entity_add_collider(ett_idx, &col);
@@ -89,10 +89,10 @@ void game_init() {
         // addon
         u32 hair_profile_idx = gender * 2 + 1 + 6 + rand() % 2;
 
-        sprite *hair_spr;
-        entity_add_sprite(ett_idx, hair_profile_idx, &hair_spr);
-        hair_spr->offset_x = -16 + HAIR_OFFSET_BY_RACES[race].x;
-        hair_spr->offset_y = -16 + HAIR_OFFSET_BY_RACES[race].y;
+        portrait *hair_potr;
+        entity_add_portrait(ett_idx, hair_profile_idx, &hair_potr);
+        hair_potr->offset_x = -16 + HAIR_OFFSET_BY_RACES[race].x;
+        hair_potr->offset_y = -16 + HAIR_OFFSET_BY_RACES[race].y;
     }
 }
 
