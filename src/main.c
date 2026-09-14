@@ -175,7 +175,7 @@ int main(void)
 
                 // systems draw
                 SET_CLOCK(CLOCK_START_PORTRAIT_SYS);
-                portrait_sys_draw();
+                portrait_sys_update();
                 SET_CLOCK(CLOCK_END_PORTRAIT_SYS);
 
                 SET_CLOCK(CLOCK_START_DRAW);

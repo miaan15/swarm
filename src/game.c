@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-constexpr usize NPC_COUNT = 1000;
+constexpr usize NPC_COUNT = 10000;
 constexpr f32 NPC_MIN_X = -2000;
 constexpr f32 NPC_MAX_X =  2000;
 constexpr f32 NPC_MIN_Y = -2000;
@@ -19,7 +19,7 @@ enum {
     RACE_DWARD,
 }; // get race's portrait profile by "$enum * 2 + [female]?"
 
-constexpr Vector2 HAIR_OFFSET_BY_RACES[10] = { {0}, {0}, {0, 3} };
+constexpr Vector2 HAIR_OFFSET_BY_RACES[10] = { {0, 0}, {0, 0}, {0, 3} };
 
 void game_init() {
     // arena alloc
@@ -32,11 +32,13 @@ void game_init() {
     draw_sys_init(1e2, 1e5);
 
     portrait_sys_init(1e5, 1e5);
-    collider_sys_init(1e5, 30.0f);
+    collider_sys_init(1e5);
     status_sys_init(1e5);
     entity_sys_init(1e5);
 
     action_sys_init(1e5);
+
+    chunk_sys_init(1e5);
 
     // texture load
     texture_load("img/char_base.png"); // 1

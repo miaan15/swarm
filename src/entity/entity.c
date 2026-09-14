@@ -3,14 +3,8 @@
 #include "context.h"
 #include "log.h"
 #include <assert.h>
-#include <math.h>
 
 struct entity_sys entity_sys = {0};
-
-// =============================================================================
-void entity_cal_chunk_pos(f32 x, f32 y, u16 *chunk_x, u16 *chunk_y);
-void entity_chunk_add(u32 ett_idx);
-void entity_chunk_remv(u32 ett_idx);
 
 // =============================================================================
 void entity_sys_init(usize cap) {
@@ -53,7 +47,7 @@ u32 entity_create(f32 x, f32 y, entity **r_entity) {
     entity_pos_set_position(idx, x, y);
     entity_pos_set_velocity(idx, 0, 0);
 
-    entity_chunk_add(idx);
+    chunk_add_entity(idx);
 
     log_debug("Created Entity [%u]", idx);
 
@@ -107,7 +101,7 @@ void entity_destroy(u32 idx) {
         stt_idx = stt->next_in_entity;
     }
 
-    entity_chunk_remv(idx);
+    chunk_remv_entity(idx);
 
     log_debug("Destroyed Entity [%u]", idx);
 }
@@ -156,7 +150,6 @@ u32 entity_add_collider(u32 idx, collider **r_collider) {
     }
 
     u32 col_idx = collider_create(r_collider);
-    collider_add_to_tree(col_idx);
 
     entity *ett = &entity_sys.entity_pool[idx];
     (*r_collider)->next_collider = ett->collider_begin;
@@ -232,49 +225,6 @@ void entity_pos_get(u32 idx, f32 *x, f32 *y, f32 *vx, f32 *vy) {
 }
 
 // =============================================================================
-void entity_query(f32 x, f32 y, f32 w, f32 h, u32 **r_entity_arr, usize *r_entity_arr_len) {
-    *r_entity_arr = nullptr; *r_entity_arr_len = 0;
-    usize entity_arr_cap = 0;
-
-    f32 min_x = x - (f32)ENTITY_CHUNK_SIZE / 4;
-    f32 min_y = y - (f32)ENTITY_CHUNK_SIZE / 4;
-    f32 max_x = x + w + (f32)ENTITY_CHUNK_SIZE / 4;
-    f32 max_y = y + h + (f32)ENTITY_CHUNK_SIZE / 4;
-
-    u16 start_cx, end_cx, start_cy, end_cy;
-    entity_cal_chunk_pos(min_x, min_y, &start_cx, &start_cy);
-    entity_cal_chunk_pos(max_x, max_y, &end_cx, &end_cy);
-
-    for (u16 j = start_cy; j <= end_cy; ++j) {
-        for (u16 i = start_cx; i <= end_cx; ++i) {
-            u32 ett_idx = entity_sys.chunk_begin_arr[i + j * ENTITY_CHUNK_COUNT];
-            while (ett_idx != 0) {
-                assert(ett_idx < entity_sys.entity_max_idx);
-                entity *ett = &entity_sys.entity_pool[ett_idx];
-
-                // if bounds collide
-                if (ett->bounds_x < x + w && ett->bounds_x + ett->bounds_w > x
-                    && ett->bounds_y < y + h && ett->bounds_y + ett->bounds_h > y) {
-                    // push to result
-                    if (*r_entity_arr_len >= entity_arr_cap) {
-                        entity_arr_cap = entity_arr_cap < 32 ? 32 : entity_arr_cap * 2;
-                        u32 *_new = arena_alloc(tick_arena, entity_arr_cap * sizeof(u32));
-                        if (*r_entity_arr != nullptr) {
-                            memcpy(_new, *r_entity_arr, *r_entity_arr_len * sizeof(u32));
-                        }
-                        *r_entity_arr = _new;
-                    }
-
-                    (*r_entity_arr)[(*r_entity_arr_len)++] = ett_idx;
-                }
-
-                ett_idx = ett->next_in_chunk;
-            }
-        }
-    }
-}
-
-// =============================================================================
 void entity_sys_update() {
     // handle
     for (usize i = 1; i < entity_sys.entity_max_idx; ++i) {
@@ -305,9 +255,6 @@ void entity_sys_update() {
         usize ij = i % 8;
         entity_pos_soa *soa = &entity_sys.pos_soa_pool[ii];
 
-        // sneak in some bounds update
-        f32 min_x = INFINITY, min_y = INFINITY, max_x = -INFINITY, max_y = -INFINITY;
-
         // if the entity moved
         if (((ett->logic_flag >> _ENTITY_LOGIC_FLAG_MOVED) & 1)
             || ((ett->logic_flag >> _ENTITY_LOGIC_FLAG_CREATED) & 1)
@@ -324,12 +271,6 @@ void entity_sys_update() {
                 potr->y = y + potr->offset_y;
 
                 portrait_idx = potr->next_in_entity;
-
-                // bounds update
-                min_x = potr->x < min_x ? potr->x : min_x;
-                min_y = potr->y < min_y ? potr->y : min_y;
-                max_x = potr->x + potr->w > max_x ? potr->x + potr->w : max_x;
-                max_y = potr->y + potr->h > max_y ? potr->y + potr->h : max_y;
             }
 
             // update all colliders
@@ -341,123 +282,15 @@ void entity_sys_update() {
                 col->y = y + col->offset_y;
 
                 collider_idx = col->next_collider;
-
-                // bounds update
-                min_x = col->x < min_x ? col->x : min_x;
-                min_y = col->y < min_y ? col->y : min_y;
-                max_x = col->x + col->w > max_x ? col->x + col->w : max_x;
-                max_y = col->y + col->h > max_y ? col->y + col->h : max_y;
             }
-
-            // update bounds
-            ett->bounds_x = min_x;
-            ett->bounds_y = min_y;
-            ett->bounds_w = max_x - min_x;
-            ett->bounds_h = max_y - min_y;
 
             // update chunk
-            {
-                u16 chunk_x, chunk_y;
-                entity_cal_chunk_pos(x, y, &chunk_x, &chunk_y);
-
-                if (ett->chunk_x != chunk_x || ett->chunk_y != chunk_y) {
-                    entity_chunk_remv(i);
-                    entity_chunk_add(i);
-                }
-            }
+            chunk_update_entity(i);
 
             // de-flag
             ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_CREATED);
             ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_MOVED);
         }
-        SET_CLOCK(CLOCK_END_ENTITY_COMPS_UPDATE);
-
-        // FIXME this should be in frame update
-        // // culling portrait draw
-        // {
-        //     f32 camera_bounds_x = camera_x - screen_width * camera_zoom / 2;
-        //     f32 camera_bounds_y = camera_y - screen_height * camera_zoom / 2;
-        //     f32 camera_bounds_w = screen_width * camera_zoom;
-        //     f32 camera_bounds_h = screen_height * camera_zoom;
-        //
-        //     u32 *ett_in_arr; usize ett_in_arr_len;
-        //     entity_query(camera_bounds_x, camera_bounds_y, camera_bounds_w, camera_bounds_h,
-        //                  &ett_in_arr, &ett_in_arr_len);
-        //
-        //     for (usize i = 0; i < ett_in_arr_len; ++i) {
-        //         u32 ett_idx = ett_in_arr[i];
-        //         assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
-        //         entity *ett = &entity_sys.entity_pool[ett_idx];
-        //
-        //         // show portraits
-        //         for (u32 portrait_idx = ett->portrait_begin; portrait_idx != 0;) {
-        //             portrait *potr = portrait_get(portrait_idx);
-        //             assert(potr->entity_idx == ett_idx);
-        //
-        //             potr->show = true;
-        //             log_info("%u: %u", time_ms, portrait_idx);
-        //
-        //             portrait_idx = potr->next_portrait;
-        //         }
-        //     }
-        // }
     }
-}
-
-// PRIVATE
-// =============================================================================
-void entity_cal_chunk_pos(f32 x, f32 y, u16 *chunk_x, u16 *chunk_y) {
-    if (chunk_x != nullptr) *chunk_x = (i32)floorf(x / ENTITY_CHUNK_SIZE) + (ENTITY_CHUNK_COUNT / 2 - 1);
-    if (chunk_y != nullptr) *chunk_y = (i32)floorf(y / ENTITY_CHUNK_SIZE) + (ENTITY_CHUNK_COUNT / 2 - 1);
-}
-
-void entity_chunk_add(u32 ett_idx) {
-    assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
-
-    entity *ett = &entity_sys.entity_pool[ett_idx];
-
-    f32 x, y;
-    entity_pos_get(ett_idx, &x, &y, nullptr, nullptr);
-
-    u16 chunk_x, chunk_y;
-    entity_cal_chunk_pos(x, y, &chunk_x, &chunk_y);
-
-    u32 *chunk_begin = &entity_sys.chunk_begin_arr[chunk_x + chunk_y * ENTITY_CHUNK_COUNT];
-
-    // linking
-    ett->next_in_chunk = *chunk_begin;
-    ett->pre_in_chunk = 0;
-    if (*chunk_begin != 0) {
-        assert(*chunk_begin < entity_sys.entity_max_idx);
-        entity_sys.entity_pool[*chunk_begin].pre_in_chunk = ett_idx;
-    }
-    *chunk_begin = ett_idx;
-
-    // update entity
-    ett->chunk_x = chunk_x;
-    ett->chunk_y = chunk_y;
-}
-
-void entity_chunk_remv(u32 ett_idx) {
-    assert(ett_idx > 0 && ett_idx < entity_sys.entity_max_idx);
-
-    entity *ett = &entity_sys.entity_pool[ett_idx];
-
-    u32 *chunk_begin = &entity_sys.chunk_begin_arr[ett->chunk_x + ett->chunk_y * ENTITY_CHUNK_COUNT];
-
-    // linking
-    if (*chunk_begin == ett_idx) {
-        *chunk_begin = ett->next_in_chunk;
-    }
-    if (ett->pre_in_chunk != 0) {
-        assert(ett->pre_in_chunk < entity_sys.entity_max_idx);
-        entity_sys.entity_pool[ett->pre_in_chunk].next_in_chunk = ett->next_in_chunk;
-    }
-    if (ett->next_in_chunk != 0) {
-        assert(ett->next_in_chunk < entity_sys.entity_max_idx);
-        entity_sys.entity_pool[ett->next_in_chunk].pre_in_chunk = ett->pre_in_chunk;
-    }
-
-    // update entity
-    ett->next_in_chunk = ett->pre_in_chunk = 0;
+    SET_CLOCK(CLOCK_END_ENTITY_COMPS_UPDATE);
 }

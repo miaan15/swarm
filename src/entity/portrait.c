@@ -93,6 +93,8 @@ u32 portrait_create(u32 profile_idx, portrait **r_portrait) {
     potr->w = potr->sw;
     potr->h = potr->sh;
 
+    chunk_add_portrait(idx);
+
     log_debug("Created Portrait [%u]: PortraitProfile = [%u]", idx, profile_idx);
 
     if (r_portrait != nullptr) *r_portrait = potr;
@@ -113,6 +115,8 @@ void portrait_destroy(u32 idx) {
 
     --portrait_sys.portrait_len;
 
+    chunk_remv_portrait(idx);
+
     log_debug("Destroyed Portrait [%u]", idx);
 }
 
@@ -126,25 +130,22 @@ portrait *portrait_get(u32 idx) {
 }
 
 // =============================================================================
-void portrait_sys_draw() {
+void portrait_sys_update() {
     for (usize i = 1; i < portrait_sys.portrait_max_idx; ++i) {
         portrait *potr = &portrait_sys.portrait_pool[i];
         if (potr->pool_flag != ALIVE_POOL_FLAG) continue;
 
-        if (potr->show || true) { // FIXME
-            // setup drawer
-            drawer *drr = draw_make();
-            drr->tex = potr->tex;
-            memcpy(&drr->sx, &potr->sx, 4 * sizeof(f32));
-            drr->dx = potr->x;
-            drr->dy = potr->y;
-            drr->dw = potr->w;
-            drr->dh = potr->h;
-            draw_meta_set_y(&drr->meta, drr->dy);
-            draw_meta_set_z(&drr->meta, potr->z);
+        chunk_update_portrait(i);
 
-            // hid again
-            potr->show = false;
-        }
+        // setup drawer
+        drawer *drr = draw_make();
+        drr->tex = potr->tex;
+        memcpy(&drr->sx, &potr->sx, 4 * sizeof(f32));
+        drr->dx = potr->x;
+        drr->dy = potr->y;
+        drr->dw = potr->w;
+        drr->dh = potr->h;
+        draw_meta_set_y(&drr->meta, drr->dy);
+        // draw_meta_set_z(&drr->meta, potr->z);
     }
 }

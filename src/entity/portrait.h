@@ -14,9 +14,6 @@ typedef struct {
     u32 tex;
     f32 sx, sy, sw, sh;
     f32 x, y, w, h;
-    i8 z;
-
-    bool show;
 
     // entity
     u32 entity_idx;
@@ -56,4 +53,4 @@ void portrait_destroy(u32 idx);
 [[nodiscard]] portrait *portrait_get(u32 idx);
 
 // =============================================================================
-void portrait_sys_draw();
+void portrait_sys_update();
