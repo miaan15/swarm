@@ -20,25 +20,25 @@ typedef struct {
 
     // more specific stats
     f32 damage;
-} effect;
+} status;
 
-struct effect_sys {
-    effect *effect_pool;
-    usize effect_cap;
-    usize effect_head;
-    usize effect_max_idx;
-    u32 effect_len;
+struct status_sys {
+    status *status_pool;
+    usize status_cap;
+    usize status_head;
+    usize status_max_idx;
+    u32 status_len;
 };
-extern struct effect_sys effect_sys;
+extern struct status_sys status_sys;
 
 // =============================================================================
-void effect_sys_init(usize cap);
+void status_sys_init(usize cap);
 
 // =============================================================================
-u32 effect_create(u32 type, effect **r_effect);
-void effect_destroy(u32 idx);
+u32 status_create(u32 type, status **r_status);
+void status_destroy(u32 idx);
 
-[[nodiscard]] effect *effect_get(u32 idx);
+[[nodiscard]] status *status_get(u32 idx);
 
 // =============================================================================
-void effect_sys_update();
+void status_sys_update();

@@ -33,7 +33,7 @@ void game_init() {
 
     portrait_sys_init(1e5, 1e5);
     collider_sys_init(1e5, 30.0f);
-    effect_sys_init(1e5);
+    status_sys_init(1e5);
     entity_sys_init(1e5);
 
     action_sys_init(1e5);

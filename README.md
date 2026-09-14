@@ -47,7 +47,7 @@ Entities are linked to components via index-based linked lists.
 ```c
 entity_add_portrait(entity_idx, profile_idx, &portrait_ptr);
 entity_add_collider(entity_idx, &collider_ptr);
-entity_add_effect(entity_idx, type, &effect_ptr);
+entity_add_status(entity_idx, type, &status_ptr);
 ```
 
 ### Rendering

@@ -4,4 +4,4 @@
 
 void handle_entity(entity *);
 void handle_action(action *);
-void handle_effect(effect *);
+void handle_status(status *);

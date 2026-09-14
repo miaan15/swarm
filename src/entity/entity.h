@@ -3,7 +3,7 @@
 #include "action.h"
 #include "collider.h"
 #include "define.h"
-#include "effect.h"
+#include "status.h"
 #include "portrait.h"
 
 enum {
@@ -24,9 +24,9 @@ typedef struct {
     u32 collider_begin;
     u32 collider_len;
 
-    // effect
-    u32 effect_begin;
-    u32 effect_len;
+    // status
+    u32 status_begin;
+    u32 status_len;
 
     // bounds
     f32 bounds_x, bounds_y, bounds_w, bounds_h;
@@ -68,7 +68,7 @@ void entity_destroy(u32 idx);
 u32 entity_add_portrait(u32 idx, u32 profile_idx, portrait **r_portrait);
 u32 entity_add_collider(u32 idx, collider **r_collider);
 
-u32 entity_add_effect(u32 idx, u32 effect_type, effect **r_effect);
+u32 entity_add_status(u32 idx, u32 status_type, status **r_status);
 
 // =============================================================================
 void entity_pos_set_position(u32 idx, f32 x, f32 y);

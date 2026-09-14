@@ -33,7 +33,7 @@ extern f32 tick_accumulate_time_ms;
 // functions binding
 extern void (*fn_handle_entity)(entity *);
 extern void (*fn_handle_action)(action *);
-extern void (*fn_handle_effect)(effect *);
+extern void (*fn_handle_status)(status *);
 
 // bench
 #define BENCHMARK

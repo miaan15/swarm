@@ -97,14 +97,14 @@ void entity_destroy(u32 idx) {
         collider_idx = col->next_collider;
     }
 
-    // destroy all effects
-    for (u32 effect_idx = ett->effect_begin; effect_idx != 0;) {
-        effect *col = effect_get(effect_idx);
-        assert(col->entity_idx == idx);
+    // destroy all statuses
+    for (u32 stt_idx = ett->status_begin; stt_idx != 0;) {
+        status *stt = status_get(stt_idx);
+        assert(stt->entity_idx == idx);
 
-        effect_destroy(effect_idx);
+        status_destroy(stt_idx);
 
-        effect_idx = col->next_in_entity;
+        stt_idx = stt->next_in_entity;
     }
 
     entity_chunk_remv(idx);
@@ -169,24 +169,24 @@ u32 entity_add_collider(u32 idx, collider **r_collider) {
     return col_idx;
 }
 
-u32 entity_add_effect(u32 idx, u32 effect_type, effect **r_effect) {
+u32 entity_add_status(u32 idx, u32 status_type, status **r_status) {
     if (idx == 0 || idx >= entity_sys.entity_max_idx) {
-        log_err("entity_add_effect(): Entity [%u] invalid => stub", idx);
+        log_err("entity_add_status(): Entity [%u] invalid => stub", idx);
         assert(false);
         return 0;
     }
 
-    u32 eff_idx = effect_create(effect_type, r_effect);
+    u32 stt_idx = status_create(status_type, r_status);
 
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_effect)->next_in_entity = ett->effect_begin;
-    ett->effect_begin = eff_idx;
+    (*r_status)->next_in_entity = ett->status_begin;
+    ett->status_begin = stt_idx;
 
-    (*r_effect)->entity_idx = idx;
+    (*r_status)->entity_idx = idx;
 
-    log_debug("Added Effect [%u] to Entity [%u]", eff_idx, idx);
+    log_debug("Added Status [%u] to Entity [%u]", stt_idx, idx);
 
-    return eff_idx;
+    return stt_idx;
 }
 
 // =============================================================================

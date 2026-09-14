@@ -38,7 +38,7 @@ f32 tick_accumulate_time_ms = {0};
 // functions binding
 void (*fn_handle_entity)(entity *) = {0};
 void (*fn_handle_action)(action *) = {0};
-void (*fn_handle_effect)(effect *) = {0};
+void (*fn_handle_status)(status *) = {0};
 
 // bench
 clock_t clocks[100] = {0};
@@ -71,7 +71,7 @@ void engine_game_reload() {
     // functions binding // FIXME
     fn_handle_entity = dlsym(libhandle_handle, "handle_entity");
     fn_handle_action = dlsym(libhandle_handle, "handle_action");
-    fn_handle_effect = dlsym(libhandle_handle, "handle_effect");
+    fn_handle_status = dlsym(libhandle_handle, "handle_status");
 
     //
     char *err = dlerror();
@@ -142,7 +142,7 @@ int main(void)
 
             // systems update
             action_sys_update();
-            effect_sys_update();
+            status_sys_update();
 
             SET_CLOCK(CLOCK_START_ENTITY_SYS);
             entity_sys_update();
