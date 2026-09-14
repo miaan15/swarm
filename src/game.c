@@ -25,7 +25,7 @@ void game_init() {
     // engine set up
     draw_sys_init(1e2, 1e5);
 
-    portrait_sys_init(1e5, 1e5);
+    portrait_sys_init(1e3, 3 * 1e5);
     collider_sys_init(1e5);
     status_sys_init(1e5);
     entity_sys_init(1e5);
@@ -89,6 +89,7 @@ void game_init() {
         entity_add_portrait(ett_idx, hair_profile_idx, &hair_potr);
         hair_potr->offset_x = -16 + HAIR_OFFSET_BY_RACES[race].x;
         hair_potr->offset_y = -16 + HAIR_OFFSET_BY_RACES[race].y;
+        hair_potr->z_in_entity = 1;
     }
 }
 

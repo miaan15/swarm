@@ -15,6 +15,8 @@ typedef struct {
 
     u8 logic_flag;
 
+    i8 z;
+
     // portrait
     u32 portrait_begin;
     u32 portrait_len;

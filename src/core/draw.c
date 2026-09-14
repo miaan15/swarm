@@ -103,6 +103,7 @@ void draw_meta_set_y(u64 *meta, f32 y) {
 void draw_present() {
     usize cur_buffer = 0;
 
+    SET_CLOCK(CLOCK_START_DRAW_SORT);
     // radix sort (on meta: z -> y -> ...)
     for (usize shift = 0; shift < 64; shift += RADIX_BITS) {
         u32 cnt[1 << RADIX_BITS] = {0};
@@ -112,10 +113,6 @@ void draw_present() {
             drawer *drr = &draw_sys.drawer_buffer[cur_buffer][i];
             usize idx = (drr->meta >> shift) & ((1 << RADIX_BITS) - 1);
             ++cnt[idx];
-        }
-
-        if (cnt[0] == draw_sys.drawer_len) {
-            continue;
         }
 
         offs[0] = 0;
@@ -133,7 +130,9 @@ void draw_present() {
 
         cur_buffer = 1 - cur_buffer;
     }
+    SET_CLOCK(CLOCK_END_DRAW_SORT);
 
+    SET_CLOCK(CLOCK_START_DRAW_CALL);
     // actual draw
     drawer *draw_buffer = draw_sys.drawer_buffer[cur_buffer];
     for (usize i = 0; i < draw_sys.drawer_len; ++i) {
@@ -145,6 +144,7 @@ void draw_present() {
 
         DrawTexturePro(texture, src_rect, dest_rect, (Vector2){0}, 0.0f, WHITE);
     }
+    SET_CLOCK(CLOCK_END_DRAW_CALL);
 
     draw_sys.drawer_len = 0;
 }

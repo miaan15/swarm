@@ -145,18 +145,43 @@ void portrait_sys_update() {
     u32 *potr_list; usize potr_list_len;
     chunk_query_portrait(cam_x, cam_y, cam_w, cam_h, &potr_list, &potr_list_len);
 
-    log_info(">>>> %zu", potr_list_len);
     for (usize i = 0; i < potr_list_len; ++i) {
         portrait *potr = &portrait_sys.portrait_pool[potr_list[i]];
 
         // setup drawer
         drawer *drr = draw_make();
+
         drr->tex = potr->tex;
-        memcpy(&drr->sx, &potr->sx, 4 * sizeof(f32));
+        drr->sx = potr->sx;
+        drr->sy = potr->sy;
+        drr->sw = potr->sw;
+        drr->sh = potr->sh;
+
         drr->dx = potr->x;
         drr->dy = potr->y;
         drr->dw = potr->w;
         drr->dh = potr->h;
+
+        if (potr->entity_idx != 0) {
+            // entity z
+            entity *ett = entity_get(potr->entity_idx);
+            drr->meta |= (u64)(ett->z) << 56;
+
+            // entity y
+            // f32 to u32
+            f32 ett_y; entity_pos_get(potr->entity_idx, nullptr, &ett_y, nullptr, nullptr);
+            u32 uy; memcpy(&uy, &ett_y, sizeof(f32));
+            uy ^= (-(i32)(uy >> 31) | 0x80000000u);
+
+            drr->meta |= (u64)uy << 24;
+
+            // potrait z in entity
+            drr->meta |= (u64)(potr->z_in_entity) << 16;
+
+            // 16 first bit of tex
+            drr->meta |= (u64)((u16)potr->tex) << 0;
+        }
+
         draw_meta_set_y(&drr->meta, drr->dy);
         // draw_meta_set_z(&drr->meta, potr->z);
     }

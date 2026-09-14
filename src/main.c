@@ -204,10 +204,12 @@ int main(void)
                 [CLOCK_START_ENTITY_POS_UPDATE]   = "Entity Pos Update",
                 [CLOCK_START_ENTITY_COMPS_UPDATE] = "Entity Comps Update",
                 [CLOCK_START_COLLIDER_SYS]        = "Collider Sys",
-                [CLOCK_START_PORTRAIT_SYS]          = "Portrait Sys",
+                [CLOCK_START_PORTRAIT_SYS]        = "Portrait Sys",
                 [CLOCK_START_DRAW]                = "Draw",
+                [CLOCK_START_DRAW_SORT]           = "Draw Sort",
+                [CLOCK_START_DRAW_CALL]           = "Draw Call",
             };
-            for (int i = 0; i < 16; i += 2) {
+            for (int i = 0; i < 20; i += 2) {
                 clock_t start = clocks[i];
                 clock_t end   = clocks[i + 1];
 

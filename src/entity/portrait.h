@@ -20,6 +20,7 @@ typedef struct {
     u32 next_in_entity;
 
     f32 offset_x, offset_y;
+    i8 z_in_entity;
 
     // chunk
     i32 chunk_x, chunk_y;
