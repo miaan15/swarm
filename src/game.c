@@ -8,10 +8,10 @@
 #include <math.h>
 
 constexpr usize NPC_COUNT = 10000;
-constexpr f32 NPC_MIN_X = -2000;
-constexpr f32 NPC_MAX_X =  2000;
-constexpr f32 NPC_MIN_Y = -2000;
-constexpr f32 NPC_MAX_Y =  2000;
+constexpr f32 NPC_MIN_X = -3000;
+constexpr f32 NPC_MAX_X =  3000;
+constexpr f32 NPC_MIN_Y = -3000;
+constexpr f32 NPC_MAX_Y =  3000;
 
 enum {
     RACE_HUMAN,
@@ -22,12 +22,6 @@ enum {
 constexpr Vector2 HAIR_OFFSET_BY_RACES[10] = { {0, 0}, {0, 0}, {0, 3} };
 
 void game_init() {
-    // arena alloc
-    arena_init(&omni_arena, 500 << 10 << 10); // 500MB
-    arena_init_in_arena(&tick_arena_raw[0], &omni_arena, 50 << 10 << 10); // 50MB
-    arena_init_in_arena(&tick_arena_raw[1], &omni_arena, 50 << 10 << 10); // 50MB
-    tick_arena = &tick_arena_raw[cur_tick_arena_idx];
-
     // engine set up
     draw_sys_init(1e2, 1e5);
 
@@ -84,8 +78,8 @@ void game_init() {
         // random velocity
         f32 speed = 50.0f + (f32)rand() / (f32)RAND_MAX * 100.0f;
         f32 angle = (f32)rand() / (f32)RAND_MAX * 6.2831853f; // 2*PI
-        f32 vx = cosf(angle) * speed;
-        f32 vy = sinf(angle) * speed;
+        f32 vx = cosf(angle) * speed * 0;
+        f32 vy = sinf(angle) * speed * 0;
         entity_pos_set_velocity(ett_idx, vx, vy);
 
         // addon

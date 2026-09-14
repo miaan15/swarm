@@ -136,6 +136,18 @@ void portrait_sys_update() {
         if (potr->pool_flag != ALIVE_POOL_FLAG) continue;
 
         chunk_update_portrait(i);
+    }
+
+    f32 cam_x = camera_x - screen_width  / camera_zoom / 2;
+    f32 cam_y = camera_y - screen_height / camera_zoom / 2;
+    f32 cam_w = screen_width  / camera_zoom;
+    f32 cam_h = screen_height / camera_zoom;
+    u32 *potr_list; usize potr_list_len;
+    chunk_query_portrait(cam_x, cam_y, cam_w, cam_h, &potr_list, &potr_list_len);
+
+    log_info(">>>> %zu", potr_list_len);
+    for (usize i = 0; i < potr_list_len; ++i) {
+        portrait *potr = &portrait_sys.portrait_pool[potr_list[i]];
 
         // setup drawer
         drawer *drr = draw_make();

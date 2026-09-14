@@ -85,6 +85,12 @@ void engine_game_reload() {
 // =============================================================================
 int main(void)
 {
+    // arena alloc
+    arena_init(&omni_arena, 500 << 10 << 10); // 500MB
+    arena_init_in_arena(&tick_arena_raw[0], &omni_arena, 50 << 10 << 10); // 50MB
+    arena_init_in_arena(&tick_arena_raw[1], &omni_arena, 50 << 10 << 10); // 50MB
+    tick_arena = &tick_arena_raw[cur_tick_arena_idx];
+
     // raylib
     InitWindow(screen_width, screen_height, "swarm");
 
@@ -132,8 +138,9 @@ int main(void)
             tick_accumulate_time_ms -= tick_delta_ms;
 
             // swap tick arena
-            tick_arena = &tick_arena_raw[cur_tick_arena_idx];
             cur_tick_arena_idx = 1 - cur_tick_arena_idx;
+            tick_arena = &tick_arena_raw[cur_tick_arena_idx];
+            arena_reset(tick_arena);
 
             SET_CLOCK(CLOCK_START_GAME_UPDATE);
             // UPDATE
