@@ -40,6 +40,9 @@ void (*fn_handle_entity)(entity *) = {0};
 void (*fn_handle_action)(action *) = {0};
 void (*fn_handle_effect)(effect *) = {0};
 
+// bench
+clock_t clocks[100] = {0};
+
 // =============================================================================
 Camera2D camera = {0};
 
@@ -115,6 +118,8 @@ int main(void)
         // INPUT
         game_input();
 
+        SET_CLOCK(CLOCK_START_TICK);
+
         // tick handle
         tick_delta_ms = 1000 / tick_per_second;
         // tick should not lower than fps
@@ -130,19 +135,29 @@ int main(void)
             tick_arena = &tick_arena_raw[cur_tick_arena_idx];
             cur_tick_arena_idx = 1 - cur_tick_arena_idx;
 
+            SET_CLOCK(CLOCK_START_GAME_UPDATE);
             // UPDATE
             game_update();
+            SET_CLOCK(CLOCK_END_GAME_UPDATE);
 
             // systems update
             action_sys_update();
             effect_sys_update();
+
+            SET_CLOCK(CLOCK_START_ENTITY_SYS);
             entity_sys_update();
+            SET_CLOCK(CLOCK_END_ENTITY_SYS);
+
+            SET_CLOCK(CLOCK_START_COLLIDER_SYS);
             collider_sys_update();
+            SET_CLOCK(CLOCK_END_COLLIDER_SYS);
 
             // UPDATE LATE
             game_update_late();
         }
         tick_frame_alpha = (f32)tick_accumulate_time_ms / (f32)tick_delta_ms;
+
+        SET_CLOCK(CLOCK_END_TICK);
 
         //
         camera.target = (Vector2){ camera_x, camera_y };
@@ -159,13 +174,47 @@ int main(void)
                 game_draw();
 
                 // systems draw
+                SET_CLOCK(CLOCK_START_SPRITE_SYS);
                 sprite_sys_draw();
+                SET_CLOCK(CLOCK_END_SPRITE_SYS);
+
+                SET_CLOCK(CLOCK_START_DRAW);
                 draw_present();
+                SET_CLOCK(CLOCK_END_DRAW);
             EndMode2D();
 
             DrawRectangle(0, 0, 110, 40, WHITE);
             DrawFPS(10, 10);
         EndDrawing();
+
+#ifdef BENCHMARK
+        {
+            printf("\n===========================================================\n");
+            const char *const CLOCK_LABELS[] = {
+                [CLOCK_START_TICK]                = "Tick",
+                [CLOCK_START_GAME_UPDATE]         = "Game Update",
+                [CLOCK_START_ENTITY_SYS]          = "Entity Sys",
+                [CLOCK_START_ENTITY_POS_UPDATE]   = "Entity Pos Update",
+                [CLOCK_START_ENTITY_COMPS_UPDATE] = "Entity Comps Update",
+                [CLOCK_START_COLLIDER_SYS]        = "Collider Sys",
+                [CLOCK_START_SPRITE_SYS]          = "Sprite Sys",
+                [CLOCK_START_DRAW]                = "Draw",
+            };
+            for (int i = 0; i < 16; i += 2) {
+                clock_t start = clocks[i];
+                clock_t end   = clocks[i + 1];
+
+                double elapsed_ms = ((double)(end - start) / CLOCKS_PER_SEC) * 1000.0;
+
+                printf("%-20s: %.4f ms\n", CLOCK_LABELS[i], elapsed_ms);
+
+                if (i == 0 && elapsed_ms < 1) {
+                    i += 5 * 2;
+                    printf("\n\n\n\n\n");
+                }
+            }
+        }
+#endif
     }
 
     // DESTROY

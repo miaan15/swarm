@@ -284,6 +284,7 @@ void entity_sys_update() {
         fn_handle_entity(ett);
     }
 
+    SET_CLOCK(CLOCK_START_ENTITY_POS_UPDATE);
     // update position - hot af line
     const f32 dt = (f32)tick_delta_ms / 1000.0f;
     for (usize i = 0; i < (entity_sys.entity_max_idx + 7) / 8; ++i) {
@@ -292,7 +293,9 @@ void entity_sys_update() {
             entity_sys.pos_soa_pool[i].y[j] += entity_sys.pos_soa_pool[i].vy[j] * dt;
         }
     }
+    SET_CLOCK(CLOCK_END_ENTITY_POS_UPDATE);
 
+    SET_CLOCK(CLOCK_START_ENTITY_COMPS_UPDATE);
     // update components
     for (usize i = 1; i < entity_sys.entity_max_idx; ++i) {
         entity *ett = entity_get(i);
@@ -367,6 +370,7 @@ void entity_sys_update() {
             ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_CREATED);
             ett->logic_flag &= ~(1 << _ENTITY_LOGIC_FLAG_MOVED);
         }
+        SET_CLOCK(CLOCK_END_ENTITY_COMPS_UPDATE);
 
         // FIXME this should be in frame update
         // // culling sprite draw

@@ -3,6 +3,7 @@
 #include "arena.h"
 #include "define.h"
 #include "entity.h"
+#include <time.h>
 
 // config stuff
 extern f32 screen_width;
@@ -34,4 +35,31 @@ extern void (*fn_handle_entity)(entity *);
 extern void (*fn_handle_action)(action *);
 extern void (*fn_handle_effect)(effect *);
 
-//
+// bench
+#define BENCHMARK
+extern clock_t clocks[100];
+enum {
+    CLOCK_START_TICK,
+    CLOCK_END_TICK,
+    CLOCK_START_GAME_UPDATE,
+    CLOCK_END_GAME_UPDATE,
+    CLOCK_START_ENTITY_SYS,
+    CLOCK_END_ENTITY_SYS,
+    CLOCK_START_ENTITY_POS_UPDATE,
+    CLOCK_END_ENTITY_POS_UPDATE,
+    CLOCK_START_ENTITY_COMPS_UPDATE,
+    CLOCK_END_ENTITY_COMPS_UPDATE,
+    CLOCK_START_COLLIDER_SYS,
+    CLOCK_END_COLLIDER_SYS,
+    CLOCK_START_SPRITE_SYS,
+    CLOCK_END_SPRITE_SYS,
+    CLOCK_START_DRAW,
+    CLOCK_END_DRAW,
+};
+#ifdef BENCHMARK
+    #define SET_CLOCK(i) do { \
+        clocks[i] = clock(); \
+    } while (0)
+#else
+    #define SET_CLOCK(i) do { } while (0)
+#endif

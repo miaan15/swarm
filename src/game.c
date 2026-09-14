@@ -5,8 +5,9 @@
 #include "entity.h"
 #include <raylib.h>
 #include <stdlib.h>
+#include <math.h>
 
-constexpr usize NPC_COUNT = 10000;
+constexpr usize NPC_COUNT = 1000;
 constexpr f32 NPC_MIN_X = -2000;
 constexpr f32 NPC_MAX_X =  2000;
 constexpr f32 NPC_MIN_Y = -2000;
@@ -71,7 +72,21 @@ void game_init() {
         spr->offset_x = -16;
         spr->offset_y = -16;
 
-        // add
+        collider *col;
+        entity_add_collider(ett_idx, &col);
+        col->w = 32;
+        col->h = 32;
+        col->offset_x = -16;
+        col->offset_y = -16;
+
+        // random velocity
+        f32 speed = 50.0f + (f32)rand() / (f32)RAND_MAX * 100.0f;
+        f32 angle = (f32)rand() / (f32)RAND_MAX * 6.2831853f; // 2*PI
+        f32 vx = cosf(angle) * speed;
+        f32 vy = sinf(angle) * speed;
+        entity_pos_set_velocity(ett_idx, vx, vy);
+
+        // addon
         u32 hair_profile_idx = gender * 2 + 1 + 6 + rand() % 2;
 
         sprite *hair_spr;
