@@ -32,7 +32,7 @@ typedef struct {
     f32 bounds_x, bounds_y, bounds_w, bounds_h;
 
     // chunk
-    u16 chunk_x, chunk_y;
+    i32 chunk_x, chunk_y;
     u32 next_in_chunk, pre_in_chunk;
 } entity;
 

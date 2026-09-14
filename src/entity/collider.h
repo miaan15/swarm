@@ -12,10 +12,14 @@ typedef struct {
 
     u32 tree_node_idx;
 
-    // for entity stuff
+    // entity
     u32 entity_idx;
     u32 next_collider;
     f32 offset_x, offset_y;
+
+    // chunk
+    i32 chunk_x, chunk_y;
+    u32 next_in_chunk, pre_in_chunk;
 } collider;
 
 typedef struct {

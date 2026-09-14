@@ -10,7 +10,7 @@ typedef struct {
 
     // entity stuff
     u32 entity_idx;
-    u32 next_effect;
+    u32 next_in_entity;
 
     // stats
     u32 stack_count;

@@ -84,7 +84,7 @@ void entity_destroy(u32 idx) {
 
         sprite_destroy(sprite_idx);
 
-        sprite_idx = spr->next_sprite;
+        sprite_idx = spr->next_in_entity;
     }
 
     // destroy all colliders
@@ -104,7 +104,7 @@ void entity_destroy(u32 idx) {
 
         effect_destroy(effect_idx);
 
-        effect_idx = col->next_effect;
+        effect_idx = col->next_in_entity;
     }
 
     entity_chunk_remv(idx);
@@ -138,7 +138,7 @@ u32 entity_add_sprite(u32 idx, u32 profile_idx, sprite **r_sprite) {
     u32 spr_idx = sprite_create(profile_idx, r_sprite);
 
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_sprite)->next_sprite = ett->sprite_begin;
+    (*r_sprite)->next_in_entity = ett->sprite_begin;
     ett->sprite_begin = spr_idx;
 
     (*r_sprite)->entity_idx = idx;
@@ -179,7 +179,7 @@ u32 entity_add_effect(u32 idx, u32 effect_type, effect **r_effect) {
     u32 eff_idx = effect_create(effect_type, r_effect);
 
     entity *ett = &entity_sys.entity_pool[idx];
-    (*r_effect)->next_effect = ett->effect_begin;
+    (*r_effect)->next_in_entity = ett->effect_begin;
     ett->effect_begin = eff_idx;
 
     (*r_effect)->entity_idx = idx;
@@ -323,7 +323,7 @@ void entity_sys_update() {
                 spr->x = x + spr->offset_x;
                 spr->y = y + spr->offset_y;
 
-                sprite_idx = spr->next_sprite;
+                sprite_idx = spr->next_in_entity;
 
                 // bounds update
                 min_x = spr->x < min_x ? spr->x : min_x;

@@ -18,10 +18,15 @@ typedef struct {
 
     bool show;
 
-    // for entity stuff
+    // entity
     u32 entity_idx;
-    u32 next_sprite;
+    u32 next_in_entity;
+
     f32 offset_x, offset_y;
+
+    // chunk
+    i32 chunk_x, chunk_y;
+    u32 next_in_chunk, pre_in_chunk;
 } sprite;
 
 struct sprite_sys {
