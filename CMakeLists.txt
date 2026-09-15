@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 project(a C)
 
-
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -17,20 +16,35 @@ endif()
 
 # vendors
 function(build_vendor_lib lib_name)
+    set(VENDOR_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/${lib_name}")
     set(VENDOR_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/build/${lib_name}")
 
     if(NOT EXISTS "${VENDOR_BUILD_DIR}")
         message(STATUS "Building vendor: ${lib_name}...")
-        find_program(BASH_EXECUTABLE bash REQUIRED)
+
+        file(TO_NATIVE_PATH "${VENDOR_SOURCE_DIR}" NATIVE_SOURCE_DIR)
+        file(TO_NATIVE_PATH "${VENDOR_BUILD_DIR}" NATIVE_BUILD_DIR)
 
         execute_process(
-            COMMAND ${BASH_EXECUTABLE} -c 
-                "cmake -S vendor/${lib_name} -B ${VENDOR_BUILD_DIR} -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release && cmake --build ${VENDOR_BUILD_DIR}"
+            COMMAND ${CMAKE_COMMAND}
+                -S "${NATIVE_SOURCE_DIR}"
+                -B "${NATIVE_BUILD_DIR}"
+                -DCMAKE_BUILD_TYPE=Release
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            RESULT_VARIABLE VENDOR_BUILD_RESULT
+            RESULT_VARIABLE CONFIG_RESULT
         )
 
-        if(NOT VENDOR_BUILD_RESULT EQUAL 0)
+        if(NOT CONFIG_RESULT EQUAL 0)
+            message(FATAL_ERROR "Failed to configure vendor target: ${lib_name}")
+        endif()
+
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} --build "${NATIVE_BUILD_DIR}" --config Release
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            RESULT_VARIABLE BUILD_RESULT
+        )
+
+        if(NOT BUILD_RESULT EQUAL 0)
             message(FATAL_ERROR "Failed to build vendor target: ${lib_name}")
         endif()
     else()
@@ -67,22 +81,47 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/raylib/src"
 )
 
-# link stuff
-if(UNIX)
-    target_link_libraries(${PROJECT_NAME} PRIVATE m)
-endif()
-
-# raylib link
+# raylid
 set(RAYLIB_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/build/raylib/raylib")
 
 find_library(RAYLIB_LIB
-    NAMES raylib
+    NAMES raylib libraylib.a raylib.lib
     PATHS "${RAYLIB_LIB_DIR}"
     NO_DEFAULT_PATH
 )
 
 if(NOT RAYLIB_LIB)
-    message(FATAL_ERROR "raylib not found in ${RAYLIB_LIB_DIR}")
+    message(FATAL_ERROR "raylib library not found in ${RAYLIB_LIB_DIR}")
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${RAYLIB_LIB})
+
+# more linking
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        opengl32
+        gdi32
+        winmm
+        shell32
+        user32
+    )
+elseif(APPLE)
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${OPENGL_LIBRARIES}
+        pthread
+        m
+        "-framework IOKit"
+        "-framework Cocoa"
+        "-framework CoreVideo"
+    )
+elseif(UNIX)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        GL
+        m
+        pthread
+        dl
+        rt
+        X11
+    )
+endif()
