@@ -2,7 +2,7 @@
 
 #include "define.h"
 
-constexpr u32 CHUNK_SIZE = 512;
+constexpr u32 CHUNK_SIZE = 1024;
 
 typedef struct {
     bool alive;
