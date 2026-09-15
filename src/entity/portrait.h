@@ -12,8 +12,11 @@ typedef struct {
     u32 idx;
 
     u32 tex;
-    f32 sx, sy, sw, sh;
+    f32 src_x, src_y, src_w, src_h;
     f32 x, y, w, h;
+
+    f32 last_x, last_y;
+    f32 draw_x, draw_y;
 
     // entity
     u32 entity_idx;

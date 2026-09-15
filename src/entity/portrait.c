@@ -4,6 +4,7 @@
 #include "draw.h"
 #include "log.h"
 #include <assert.h>
+#include <math.h>
 
 struct portrait_sys portrait_sys = {0};
 
@@ -25,8 +26,8 @@ void portrait_sys_init(usize profile_cap, usize portrait_cap) {
 
     portrait_sys.portrait_head = portrait_sys.portrait_max_idx = portrait_sys.portrait_len = 1;
     portrait_sys.portrait_pool[0] = (portrait){0};
-    portrait_sys.portrait_pool[0].w = portrait_sys.portrait_pool[0].sw = 16;
-    portrait_sys.portrait_pool[0].h = portrait_sys.portrait_pool[0].sh = 16;
+    portrait_sys.portrait_pool[0].w = portrait_sys.portrait_pool[0].src_w = 16;
+    portrait_sys.portrait_pool[0].h = portrait_sys.portrait_pool[0].src_h = 16;
 }
 
 // =============================================================================
@@ -85,13 +86,16 @@ u32 portrait_create(u32 profile_idx, portrait **r_portrait) {
 
     portrait_profile potr_prf = portrait_sys.profile_arr[profile_idx];
     potr->tex = potr_prf.tex;
-    potr->sx = potr_prf.x;
-    potr->sy = potr_prf.y;
-    potr->sw = potr_prf.w;
-    potr->sh = potr_prf.h;
+    potr->src_x = potr_prf.x;
+    potr->src_y = potr_prf.y;
+    potr->src_w = potr_prf.w;
+    potr->src_h = potr_prf.h;
 
-    potr->w = potr->sw;
-    potr->h = potr->sh;
+    potr->w = potr->src_w;
+    potr->h = potr->src_h;
+
+    potr->draw_x = NAN;
+    potr->draw_y = NAN;
 
     chunk_add_portrait(idx);
 
@@ -145,20 +149,30 @@ void portrait_sys_update() {
     u32 *potr_list; usize potr_list_len;
     chunk_query_portrait(cam_x, cam_y, cam_w, cam_h, &potr_list, &potr_list_len);
 
+    // tricky math stuff or interpolate
     for (usize i = 0; i < potr_list_len; ++i) {
         portrait *potr = &portrait_sys.portrait_pool[potr_list[i]];
+
+        // interpolate
+        if (isnan(potr->draw_x) || isnan(potr->draw_y)) {
+            potr->draw_x = potr->x;
+            potr->draw_y = potr->y;
+        } else {
+            potr->draw_x = potr->last_x + (potr->x - potr->last_x) * tick_frame_alpha;
+            potr->draw_y = potr->last_y + (potr->y - potr->last_y) * tick_frame_alpha;
+        }
 
         // setup drawer
         drawer *drr = draw_make();
 
         drr->tex = potr->tex;
-        drr->sx = potr->sx;
-        drr->sy = potr->sy;
-        drr->sw = potr->sw;
-        drr->sh = potr->sh;
+        drr->sx = potr->src_x;
+        drr->sy = potr->src_y;
+        drr->sw = potr->src_w;
+        drr->sh = potr->src_h;
 
-        drr->dx = potr->x;
-        drr->dy = potr->y;
+        drr->dx = potr->draw_x;
+        drr->dy = potr->draw_y;
         drr->dw = potr->w;
         drr->dh = potr->h;
 
@@ -170,7 +184,8 @@ void portrait_sys_update() {
 
             // entity y
             // f32 to u32
-            f32 ett_y; entity_pos_get(potr->entity_idx, nullptr, &ett_y, nullptr, nullptr);
+            f32 ett_y;
+            entity_pos_get(potr->entity_idx, 0, &ett_y, 0, 0, 0, 0);
             u32 ett_uy; memcpy(&ett_uy, &ett_y, sizeof(f32));
             ett_uy ^= (-(i32)(ett_uy >> 31) | 0x80000000u);
             drr->meta |= (u64)ett_uy << 24;

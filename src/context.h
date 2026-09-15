@@ -29,6 +29,7 @@ extern u32 tick_cnt;
 extern u32 tick_delta_ms;
 extern f32 tick_frame_alpha;
 extern f32 tick_accumulate_time_ms;
+extern u32 tick_at_this_frame;
 
 // functions binding
 extern void (*fn_handle_entity)(entity *);

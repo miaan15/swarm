@@ -33,7 +33,7 @@ void chunk_add_entity(u32 ett_idx) {
     }
 
     f32 x, y;
-    entity_pos_get(ett_idx, &x, &y, nullptr, nullptr);
+    entity_pos_get(ett_idx, &x, &y, 0, 0, 0, 0);
     entity *ett = entity_get(ett_idx);
 
     usize idx = chunk_open(x, y);
@@ -195,7 +195,7 @@ void chunk_update_entity(u32 ett_idx) {
     entity *ett = entity_get(ett_idx);
 
     f32 x, y;
-    entity_pos_get(ett_idx, &x, &y, nullptr, nullptr);
+    entity_pos_get(ett_idx, &x, &y, 0, 0, 0, 0);
 
     i32 cx, cy;
     chunk_cal_pos(x, y, &cx, &cy);

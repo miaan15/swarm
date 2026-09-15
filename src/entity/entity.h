@@ -36,7 +36,7 @@ typedef struct {
 } entity;
 
 typedef struct {
-    f32 x[8], y[8], vx[8], vy[8];
+    f32 x[8], y[8], vel_x[8], vel_y[8], last_x[8], last_y[8];
 } entity_pos_soa;
 
 struct entity_sys {
@@ -66,9 +66,11 @@ u32 entity_add_status(u32 idx, u32 status_type, status **r_status);
 
 // =============================================================================
 void entity_pos_set_position(u32 idx, f32 x, f32 y);
-void entity_pos_set_velocity(u32 idx, f32 vx, f32 vy);
+void entity_pos_set_velocity(u32 idx, f32 vel_x, f32 vel_y);
 
-void entity_pos_get(u32 idx, f32 *x, f32 *y, f32 *vx, f32 *vy);
+void entity_pos_get(u32 idx, f32 *x, f32 *y, f32 *vel_x, f32 *vel_y, f32 *last_x, f32 *last_y);
+
+void entity_cal_bounds(u32 idx, f32 *x, f32 *y, f32 *w, f32 *h);
 
 // =============================================================================
 void entity_sys_update();

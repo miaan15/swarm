@@ -42,8 +42,8 @@ u32 collider_create(f32 w, f32 h, collider **r_collider) {
     col->pool_flag = ALIVE_POOL_FLAG;
     col->idx = idx;
 
-    col->sw = w;
-    col->sh = h;
+    col->src_w = w;
+    col->src_h = h;
 
     chunk_add_collider(idx);
 

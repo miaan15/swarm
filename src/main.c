@@ -15,7 +15,7 @@
 f32 screen_width = 1280;
 f32 screen_height = 720;
 
-u32 tick_per_second = 20;
+u32 tick_per_second = 10;
 
 // var
 arena omni_arena = {0};
@@ -35,6 +35,7 @@ u32 tick_cnt = {0};
 u32 tick_delta_ms = {0};
 f32 tick_frame_alpha = {0};
 f32 tick_accumulate_time_ms = {0};
+u32 tick_at_this_frame = {0};
 
 // functions binding
 void (*fn_handle_entity)(entity *) = {0};
@@ -95,6 +96,7 @@ int main(void)
 
     // raylib
     InitWindow(screen_width, screen_height, "swarm");
+    // SetTargetFPS(60);
 
     camera.target = (Vector2){ camera_x, camera_y };
     camera.offset = (Vector2){ screen_width / 2, screen_height / 2 };
@@ -141,6 +143,7 @@ int main(void)
         // if on tick
         while (tick_accumulate_time_ms > tick_delta_ms) {
             tick_accumulate_time_ms -= tick_delta_ms;
+            ++tick_at_this_frame;
 
             // swap tick arena
             cur_tick_arena_idx = 1 - cur_tick_arena_idx;
@@ -198,6 +201,9 @@ int main(void)
             DrawRectangle(0, 0, 110, 40, WHITE);
             DrawFPS(10, 10);
         EndDrawing();
+
+        // Clean up
+        tick_at_this_frame = 0;
 
 #ifdef BENCHMARK
         {

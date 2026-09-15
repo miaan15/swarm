@@ -6,7 +6,7 @@ typedef struct {
     u32 pool_flag;
     u32 idx;
 
-    f32 sw, sh;
+    f32 src_w, src_h;
     f32 x, y, w, h;
 
     // entity
