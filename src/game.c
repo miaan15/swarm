@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-constexpr usize NPC_COUNT = 10000;
+constexpr usize NPC_COUNT = 5000;
 constexpr f32 NPC_MIN_X = -3000;
 constexpr f32 NPC_MAX_X =  3000;
 constexpr f32 NPC_MIN_Y = -3000;
@@ -51,6 +51,37 @@ void game_init() {
     portrait_profile_create(2,  64, 0, 32, 32); // 3: female hair
     portrait_profile_create(2,  96, 0, 32, 32); // 4: female hair
 
+    {
+        entity *ett;
+        u32 ett_idx = entity_create(0, -1, &ett);
+
+        portrait *potr;
+        entity_add_portrait(ett_idx, 5, &potr);
+        potr->offset_x = -16;
+        potr->offset_y = -16;
+        portrait *hair_potr;
+
+        entity_add_portrait(ett_idx, 1 + 6, &hair_potr);
+        hair_potr->offset_x = -16 + HAIR_OFFSET_BY_RACES[2].x;
+        hair_potr->offset_y = -16 + HAIR_OFFSET_BY_RACES[2].y;
+        hair_potr->z_in_entity = 1;
+    }
+    {
+        entity *ett;
+        u32 ett_idx = entity_create(10, 0, &ett);
+        
+        portrait *potr;
+        entity_add_portrait(ett_idx, 1, &potr);
+        potr->offset_x = -16;
+        potr->offset_y = -16;
+
+        portrait *hair_potr;
+        entity_add_portrait(ett_idx, 1 + 6, &hair_potr);
+        hair_potr->offset_x = -16 + HAIR_OFFSET_BY_RACES[0].x;
+        hair_potr->offset_y = -16 + HAIR_OFFSET_BY_RACES[0].y;
+        hair_potr->z_in_entity = 1;
+    }
+
     // spawn npcs
     for (usize i = 0; i < NPC_COUNT; ++i) {
         f32 x = NPC_MIN_X + (f32)rand() / (f32)RAND_MAX * (NPC_MAX_X - NPC_MIN_X);
@@ -69,14 +100,15 @@ void game_init() {
         potr->offset_y = -16;
 
         collider *col;
-        entity_add_collider(ett_idx, &col);
-        col->w = 32;
-        col->h = 32;
+        entity_add_collider(ett_idx, 32, 32, &col);
         col->offset_x = -16;
         col->offset_y = -16;
 
+        // random scale
+        ett->scale_x = ett->scale_y = (f32)rand() / (f32)RAND_MAX * 1.0f + 0.5f;
+
         // random velocity
-        f32 speed = 50.0f + (f32)rand() / (f32)RAND_MAX * 100.0f;
+        f32 speed = (f32)rand() / (f32)RAND_MAX * 30.0f;
         f32 angle = (f32)rand() / (f32)RAND_MAX * 6.2831853f; // 2*PI
         f32 vx = cosf(angle) * speed * 0;
         f32 vy = sinf(angle) * speed * 0;
@@ -84,7 +116,6 @@ void game_init() {
 
         // addon
         u32 hair_profile_idx = gender * 2 + 1 + 6 + rand() % 2;
-
         portrait *hair_potr;
         entity_add_portrait(ett_idx, hair_profile_idx, &hair_potr);
         hair_potr->offset_x = -16 + HAIR_OFFSET_BY_RACES[race].x;

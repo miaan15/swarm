@@ -36,7 +36,8 @@ extern void (*fn_handle_action)(action *);
 extern void (*fn_handle_status)(status *);
 
 // bench
-#define BENCHMARK
+// #define BENCHMARK
+#ifdef BENCHMARK
 extern clock_t clocks[100];
 enum {
     CLOCK_START_TICK,
@@ -60,6 +61,8 @@ enum {
     CLOCK_START_DRAW_CALL,
     CLOCK_END_DRAW_CALL,
 };
+#endif
+
 #ifdef BENCHMARK
     #define SET_CLOCK(i) do { \
         clocks[i] = clock(); \

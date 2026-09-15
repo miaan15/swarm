@@ -6,6 +6,7 @@ typedef struct {
     u32 pool_flag;
     u32 idx;
 
+    f32 sw, sh;
     f32 x, y, w, h;
 
     // entity
@@ -33,7 +34,7 @@ extern struct collider_sys collider_sys;
 void collider_sys_init(usize cap);
 
 // =============================================================================
-u32 collider_create(collider **r_collider);
+u32 collider_create(f32 w, f32 h, collider **r_collider);
 void collider_destroy(u32 idx);
 
 [[nodiscard]] collider *collider_get(u32 idx);

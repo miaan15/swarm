@@ -34,7 +34,4 @@ void texture_destroy_all();
 // =============================================================================
 drawer *draw_make();
 
-void draw_meta_set_z(u64 *meta, i8 z);
-void draw_meta_set_y(u64 *meta, f32 y);
-
 void draw_present();

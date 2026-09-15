@@ -165,24 +165,22 @@ void portrait_sys_update() {
         if (potr->entity_idx != 0) {
             // entity z
             entity *ett = entity_get(potr->entity_idx);
-            drr->meta |= (u64)(ett->z) << 56;
+            u8 ett_uz = (u8)ett->z ^ 0x80;
+            drr->meta |= (u64)ett_uz << 56;
 
             // entity y
             // f32 to u32
             f32 ett_y; entity_pos_get(potr->entity_idx, nullptr, &ett_y, nullptr, nullptr);
-            u32 uy; memcpy(&uy, &ett_y, sizeof(f32));
-            uy ^= (-(i32)(uy >> 31) | 0x80000000u);
-
-            drr->meta |= (u64)uy << 24;
+            u32 ett_uy; memcpy(&ett_uy, &ett_y, sizeof(f32));
+            ett_uy ^= (-(i32)(ett_uy >> 31) | 0x80000000u);
+            drr->meta |= (u64)ett_uy << 24;
 
             // potrait z in entity
-            drr->meta |= (u64)(potr->z_in_entity) << 16;
+            u8 potr_uz = (u8)potr->z_in_entity ^ 0x80;
+            drr->meta |= (u64)potr_uz << 16;
 
             // 16 first bit of tex
-            drr->meta |= (u64)((u16)potr->tex) << 0;
+            drr->meta |= (u64)(u16)potr->tex << 0;
         }
-
-        draw_meta_set_y(&drr->meta, drr->dy);
-        // draw_meta_set_z(&drr->meta, potr->z);
     }
 }

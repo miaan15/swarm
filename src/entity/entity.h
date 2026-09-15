@@ -15,6 +15,7 @@ typedef struct {
 
     u8 logic_flag;
 
+    f32 scale_x, scale_y;
     i8 z;
 
     // portrait
@@ -59,7 +60,7 @@ void entity_destroy(u32 idx);
 [[nodiscard]] bool entity_alive(u32 idx);
 
 u32 entity_add_portrait(u32 idx, u32 profile_idx, portrait **r_portrait);
-u32 entity_add_collider(u32 idx, collider **r_collider);
+u32 entity_add_collider(u32 idx, f32 w, f32 h, collider **r_collider);
 
 u32 entity_add_status(u32 idx, u32 status_type, status **r_status);
 

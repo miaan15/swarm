@@ -3,16 +3,17 @@ set -euo pipefail
 
 NAME="a"
 
-# reload lib only
-if [[ "${1:-}" == "--reload" ]]; then
-  if [ ! -f "build.ninja" ]; then
-    echo "build.ninja not found." >&2
-    exit 1
-  fi
-  ninja build/libhandle.so
-  exit 0
-fi
-
+# NOTE: no hot-reload rn
+# # reload lib only
+# if [[ "${1:-}" == "--reload" ]]; then
+#   if [ ! -f "build.ninja" ]; then
+#     echo "build.ninja not found." >&2
+#     exit 1
+#   fi
+#   ninja build/libhandle.so
+#   exit 0
+# fi
+#
 # vendors
 build_vendor() {
   local lib_name="$1"
@@ -74,11 +75,11 @@ mkdir -p build
   echo "  depfile = \$out.d"
   echo "  deps = gcc"
   echo "  command = gcc -MD -MF \$out.d \$cflags \$incflags -c \$in -o \$out -D_PROJECT_DIR=\"\\\"$PROJECT_DIR\\\"\" -D_EXE_DIR=\"\\\"$PROJECT_DIR/build\\\"\""
-  echo ""
-  echo "rule cc_pic"
-  echo "  depfile = \$out.d"
-  echo "  deps = gcc"
-  echo "  command = gcc -MD -MF \$out.d -fPIC \$cflags \$incflags -c \$in -o \$out -D_PROJECT_DIR=\"\\\"$PROJECT_DIR\\\"\" -D_EXE_DIR=\"\\\"$PROJECT_DIR/build\\\"\""
+  # echo ""
+  # echo "rule cc_pic"
+  # echo "  depfile = \$out.d"
+  # echo "  deps = gcc"
+  # echo "  command = gcc -MD -MF \$out.d -fPIC \$cflags \$incflags -c \$in -o \$out -D_PROJECT_DIR=\"\\\"$PROJECT_DIR\\\"\" -D_EXE_DIR=\"\\\"$PROJECT_DIR/build\\\"\""
   echo ""
   echo "rule exe"
   echo "  command = gcc \$in -o \$out \$ldflags \$libflags"
@@ -91,17 +92,20 @@ mkdir -p build
     echo "build build/${src%.c}.o: cc $src"
   done
   for src in $HANDLE_SRCS; do
-    echo "build build/${src%.c}.o: cc_pic $src"
+    # echo "build build/${src%.c}.o: cc_pic $src"
+    echo "build build/${src%.c}.o: cc $src"
   done
   echo "build $MAIN_OBJ: cc $MAIN_SRC"
   echo ""
   echo "# build exe"
-  echo "build build/$NAME: exe $MAIN_OBJ $OBJS"
+  # echo "build build/$NAME: exe $MAIN_OBJ $OBJS"
+  echo "build build/$NAME: exe $MAIN_OBJ $OBJS $HANDLE_OBJS"
+  # echo ""
+  # echo "# build handle"
+  # echo "build build/libhandle.so: shared $HANDLE_OBJS"
   echo ""
-  echo "# build handle"
-  echo "build build/libhandle.so: shared $HANDLE_OBJS"
-  echo ""
-  echo "default build/$NAME build/libhandle.so"
+  # echo "default build/$NAME build/libhandle.so"
+  echo "default build/$NAME"
 } > build.ninja
 
 ninja -t compdb cc > build/compile_commands.json

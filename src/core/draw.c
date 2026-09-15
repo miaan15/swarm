@@ -83,22 +83,6 @@ drawer *draw_make() {
     return drr;
 }
 
-void draw_meta_set_z(u64 *meta, i8 z) {
-    // i8 to u8
-    u8 uz = (u8)(z ^ 0x80);
-
-    *meta &= ~(0xFFull << (64 - 8));
-    *meta |= (u64)uz << (64 - 8);
-}
-void draw_meta_set_y(u64 *meta, f32 y) {
-    // f32 to u32
-    u32 uy; memcpy(&uy, &y, sizeof(f32));
-    uy ^= (-(i32)(uy >> 31) | 0x80000000u);
-
-    *meta &= ~(0xFFFFFFFFull << (64 - 8 - 32));
-    *meta |= (u64)uy << (64 - 8 - 32);
-}
-
 #define RADIX_BITS 8
 void draw_present() {
     usize cur_buffer = 0;

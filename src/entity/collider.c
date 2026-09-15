@@ -18,7 +18,7 @@ void collider_sys_init(usize cap) {
 }
 
 // =============================================================================
-u32 collider_create(collider **r_collider) {
+u32 collider_create(f32 w, f32 h, collider **r_collider) {
     if (collider_sys.collider_len >= collider_sys.collider_cap) {
         log_err("collider_create(): too much collideress => stub");
         assert(false);
@@ -41,6 +41,9 @@ u32 collider_create(collider **r_collider) {
     memset(col, 0, sizeof(collider));
     col->pool_flag = ALIVE_POOL_FLAG;
     col->idx = idx;
+
+    col->sw = w;
+    col->sh = h;
 
     chunk_add_collider(idx);
 

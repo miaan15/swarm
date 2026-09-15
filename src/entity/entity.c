@@ -44,6 +44,8 @@ u32 entity_create(f32 x, f32 y, entity **r_entity) {
 
     ett->logic_flag |= (1 << _ENTITY_LOGIC_FLAG_CREATED);
 
+    ett->scale_x = ett->scale_y = 1;
+
     entity_pos_set_position(idx, x, y);
     entity_pos_set_velocity(idx, 0, 0);
 
@@ -142,14 +144,14 @@ u32 entity_add_portrait(u32 idx, u32 profile_idx, portrait **r_portrait) {
     return potr_idx;
 }
 
-u32 entity_add_collider(u32 idx, collider **r_collider) {
+u32 entity_add_collider(u32 idx, f32 w, f32 h, collider **r_collider) {
     if (idx == 0 || idx >= entity_sys.entity_max_idx) {
         log_err("entity_add_collider(): Entity [%u] invalid => stub", idx);
         assert(false);
         return 0;
     }
 
-    u32 col_idx = collider_create(r_collider);
+    u32 col_idx = collider_create(w, h, r_collider);
 
     entity *ett = &entity_sys.entity_pool[idx];
     (*r_collider)->next_collider = ett->collider_begin;
@@ -267,8 +269,10 @@ void entity_sys_update() {
                 portrait *potr = portrait_get(portrait_idx);
                 assert(potr->entity_idx == i);
 
-                potr->x = x + potr->offset_x;
-                potr->y = y + potr->offset_y;
+                potr->x = x + potr->offset_x * ett->scale_x;
+                potr->y = y + potr->offset_y * ett->scale_y;
+                potr->w = potr->sw *ett->scale_x;
+                potr->h = potr->sh *ett->scale_y;
 
                 portrait_idx = potr->next_in_entity;
             }
@@ -278,8 +282,10 @@ void entity_sys_update() {
                 collider *col = collider_get(collider_idx);
                 assert(col->entity_idx == i);
 
-                col->x = x + col->offset_x;
-                col->y = y + col->offset_y;
+                col->x = x + col->offset_x * ett->scale_x;
+                col->y = y + col->offset_y * ett->scale_y;
+                col->w = col->sw *ett->scale_x;
+                col->h = col->sh *ett->scale_y;
 
                 collider_idx = col->next_collider;
             }

@@ -282,11 +282,11 @@ void chunk_query_portrait(f32 x, f32 y, f32 w, f32 h, u32 **potr_list, usize *po
 
     u32 *list = nullptr;
     usize len = 0, cap = 0;
-    const f32 pad = (f32)CHUNK_SIZE / 2;
 
     i32 min_cx, min_cy, max_cx, max_cy;
-    chunk_cal_pos(x - pad, y - pad, &min_cx, &min_cy);
-    chunk_cal_pos(x + w + pad, y + h + pad, &max_cx, &max_cy);
+    chunk_cal_pos(x, y, &min_cx, &min_cy);
+    chunk_cal_pos(x + w, y + h, &max_cx, &max_cy);
+    --min_cx; --min_cy; ++max_cx; ++max_cy;
 
     for (i32 cy = min_cy; cy <= max_cy; ++cy) {
         for (i32 cx = min_cx; cx <= max_cx; ++cx) {
@@ -323,11 +323,11 @@ void chunk_query_collider(f32 x, f32 y, f32 w, f32 h, u32 **col_list, usize *col
 
     u32 *list = nullptr;
     usize len = 0, cap = 0;
-    const f32 pad = (f32)CHUNK_SIZE / 2;
 
     i32 min_cx, min_cy, max_cx, max_cy;
-    chunk_cal_pos(x - pad, y - pad, &min_cx, &min_cy);
-    chunk_cal_pos(x + w + pad, y + h + pad, &max_cx, &max_cy);
+    chunk_cal_pos(x, y, &min_cx, &min_cy);
+    chunk_cal_pos(x + w, y + h, &max_cx, &max_cy);
+    --min_cx; --min_cy; ++max_cx; ++max_cy;
 
     for (i32 cy = min_cy; cy <= max_cy; ++cy) {
         for (i32 cx = min_cx; cx <= max_cx; ++cx) {
@@ -364,11 +364,11 @@ void chunk_query(f32 x, f32 y, f32 w, f32 h, chunk_entry **entry_list, usize *en
 
     chunk_entry *list = nullptr;
     usize len = 0, cap = 0;
-    const f32 pad = (f32)CHUNK_SIZE / 2;
 
     i32 min_cx, min_cy, max_cx, max_cy;
-    chunk_cal_pos(x - pad, y - pad, &min_cx, &min_cy);
-    chunk_cal_pos(x + w + pad, y + h + pad, &max_cx, &max_cy);
+    chunk_cal_pos(x, y, &min_cx, &min_cy);
+    chunk_cal_pos(x + w, y + h, &max_cx, &max_cy);
+    --min_cx; --min_cy; ++max_cx; ++max_cy;
 
     for (i32 cy = min_cy; cy <= max_cy; ++cy) {
         for (i32 cx = min_cx; cx <= max_cx; ++cx) {

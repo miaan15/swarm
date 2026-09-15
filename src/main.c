@@ -3,6 +3,7 @@
 #include "entity.h"
 #include "draw.h"
 #include "game.h"
+#include "handle/handle.h"
 #include "log.h"
 #include <dlfcn.h>
 #include <raylib.h>
@@ -46,41 +47,42 @@ clock_t clocks[100] = {0};
 // =============================================================================
 Camera2D camera = {0};
 
-// hot reload
-// =============================================================================
-constexpr const char libhandle_path[] = _EXE_DIR "/libhandle.so";
-constexpr const char reload_cmd[] = _PROJECT_DIR "/do.sh --reload > /dev/null";
-void *libhandle_handle = nullptr;
-
-void engine_game_reload() {
-    if (system(reload_cmd) == -1) {
-        log_err("engine_game_reload: reload cmd \"%s\" failed", reload_cmd);
-        return;
-    }
-
-    if (libhandle_handle) { dlclose(libhandle_handle); }
-
-    libhandle_handle = dlopen(libhandle_path, RTLD_NOW | RTLD_GLOBAL);
-    if (!libhandle_handle) {
-        log_err("engine_game_reload: dlopen error: %s\n", dlerror());
-        return;
-    }
-
-    dlerror(); // clear old err
-
-    // functions binding // FIXME
-    fn_handle_entity = dlsym(libhandle_handle, "handle_entity");
-    fn_handle_action = dlsym(libhandle_handle, "handle_action");
-    fn_handle_status = dlsym(libhandle_handle, "handle_status");
-
-    //
-    char *err = dlerror();
-    if (err != NULL) {
-        log_err("engine_game_reload: dlsym error: %s\n", err);
-        dlclose(libhandle_handle);
-        libhandle_handle = nullptr;
-    }
-}
+// TODO: maybe hot-reload later
+// // hot reload
+// // =============================================================================
+// constexpr const char libhandle_path[] = _EXE_DIR "/libhandle.so";
+// constexpr const char reload_cmd[] = _PROJECT_DIR "/do.sh --reload > /dev/null";
+// void *libhandle_handle = nullptr;
+//
+// void engine_game_reload() {
+//     if (system(reload_cmd) == -1) {
+//         log_err("engine_game_reload: reload cmd \"%s\" failed", reload_cmd);
+//         return;
+//     }
+//
+//     if (libhandle_handle) { dlclose(libhandle_handle); }
+//
+//     libhandle_handle = dlopen(libhandle_path, RTLD_NOW | RTLD_GLOBAL);
+//     if (!libhandle_handle) {
+//         log_err("engine_game_reload: dlopen error: %s\n", dlerror());
+//         return;
+//     }
+//
+//     dlerror(); // clear old err
+//
+//     // functions binding // FIXME
+//     fn_handle_entity = dlsym(libhandle_handle, "handle_entity");
+//     fn_handle_action = dlsym(libhandle_handle, "handle_action");
+//     fn_handle_status = dlsym(libhandle_handle, "handle_status");
+//
+//     //
+//     char *err = dlerror();
+//     if (err != NULL) {
+//         log_err("engine_game_reload: dlsym error: %s\n", err);
+//         dlclose(libhandle_handle);
+//         libhandle_handle = nullptr;
+//     }
+// }
 
 // =============================================================================
 int main(void)
@@ -100,7 +102,10 @@ int main(void)
     camera.zoom = camera_zoom;
 
     //
-    engine_game_reload();
+    // engine_game_reload();
+    fn_handle_entity = &handle_entity;
+    fn_handle_action = &handle_action;
+    fn_handle_status = &handle_status;
 
     // INIT
     game_init();
@@ -108,11 +113,11 @@ int main(void)
     // main loop
     u32 time_lastframe_ms = 0;
     while (!WindowShouldClose()) {
-        if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) 
-            && IsKeyPressed(KEY_R)) {
-            engine_game_reload();
-            log_info("GAME RELOAD...");
-        }
+        // if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) 
+        //     && IsKeyPressed(KEY_R)) {
+        //     engine_game_reload();
+        //     log_info("GAME RELOAD...");
+        // }
 
         // cal time
         time_ms = (u32)(GetTime() * 1000);
@@ -207,7 +212,7 @@ int main(void)
                 [CLOCK_START_PORTRAIT_SYS]        = "Portrait Sys",
                 [CLOCK_START_DRAW]                = "Draw",
                 [CLOCK_START_DRAW_SORT]           = "Draw Sort",
-                [CLOCK_START_DRAW_CALL]           = "Draw Call",
+                [CLOCK_START_DRAW_CALL]           = "Draw Call raylib",
             };
             for (int i = 0; i < 20; i += 2) {
                 clock_t start = clocks[i];
