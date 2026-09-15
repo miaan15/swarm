@@ -349,14 +349,4 @@ void entity_sys_update() {
         }
     }
     SET_CLOCK(CLOCK_END_ENTITY_COMPS_UPDATE);
-
-// #ifdef DEBUG
-//     // debug
-//     for (usize i = 1; i < entity_sys.entity_max_idx; ++i) {
-//         entity *ett = entity_get(i);
-//         if (ett->pool_flag != ALIVE_POOL_FLAG) continue;
-//
-//
-//     }
-// #endif
 }
