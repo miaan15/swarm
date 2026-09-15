@@ -246,8 +246,8 @@ void entity_cal_bounds(u32 idx, f32 *x, f32 *y, f32 *w, f32 *h) {
 
         min_x = potr->x < min_x ? potr->x : min_x;
         min_y = potr->y < min_y ? potr->y : min_y;
-        max_x = potr->x + potr->w < max_x ? potr->x + potr->w : max_x;
-        max_y = potr->y + potr->h < max_y ? potr->y + potr->h : max_y;
+        max_x = potr->x + potr->w > max_x ? potr->x + potr->w : max_x;
+        max_y = potr->y + potr->h > max_y ? potr->y + potr->h : max_y;
 
         portrait_idx = potr->next_in_entity;
     }
@@ -258,16 +258,16 @@ void entity_cal_bounds(u32 idx, f32 *x, f32 *y, f32 *w, f32 *h) {
 
         min_x = col->x < min_x ? col->x : min_x;
         min_y = col->y < min_y ? col->y : min_y;
-        max_x = col->x + col->w < max_x ? col->x + col->w : max_x;
-        max_y = col->y + col->h < max_y ? col->y + col->h : max_y;
+        max_x = col->x + col->w > max_x ? col->x + col->w : max_x;
+        max_y = col->y + col->h > max_y ? col->y + col->h : max_y;
 
         collider_idx = col->next_collider;
     }
 
-    if (x == nullptr) *x = min_x;
-    if (y == nullptr) *y = min_y;
-    if (w == nullptr) *w = max_x - min_x;
-    if (h == nullptr) *h = max_y - min_y;
+    if (x != nullptr) *x = min_x;
+    if (y != nullptr) *y = min_y;
+    if (w != nullptr) *w = max_x - min_x;
+    if (h != nullptr) *h = max_y - min_y;
 }
 
 // =============================================================================
@@ -284,8 +284,8 @@ void entity_sys_update() {
     // update position - hot af line
     const f32 dt = (f32)tick_delta_ms / 1000.0f;
     for (usize i = 0; i < (entity_sys.entity_max_idx + 7) / 8; ++i) {
+        entity_pos_soa *soa = &entity_sys.pos_soa_pool[i];
         for (usize j = 0; j < 8; ++j) {
-            entity_pos_soa *soa = &entity_sys.pos_soa_pool[i];
             soa->last_x[j] = soa->x[j];
             soa->last_y[j] = soa->y[j];
             soa->x[j] += soa->vel_x[j] * dt;

@@ -74,7 +74,7 @@ void game_init() {
         col->offset_y = -16;
 
         // random velocity
-        f32 speed = (f32)rand() / (f32)RAND_MAX * 50.0f;
+        f32 speed = (f32)rand() / (f32)RAND_MAX * 00.0f;
         f32 angle = (f32)rand() / (f32)RAND_MAX * 6.2831853f; // 2*PI
         f32 vx = cosf(angle) * speed;
         f32 vy = sinf(angle) * speed;
