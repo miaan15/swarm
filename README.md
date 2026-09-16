@@ -102,7 +102,9 @@ All sprite draw calls are depth-sorted by a packed 64-bit `meta` key using an 8-
 3. **Linear Time**: Sorting 14,000+ items takes **~0.81 ms**, compared to 3.5–6.0 ms for $O(N \log N)$ comparison sorts.
 4. **Frustum Culling**: Viewport bounds query the chunk grid (`chunk_query_portrait`) to eliminate off-screen entities before issuing draw calls.
 5. **Frame Interpolation (LERP)**: The variable-rate visual loop interpolates positions between ticks via `tick_frame_alpha`:
-   $$\text{draw\_pos} = \text{last\_pos} + (\text{current\_pos} - \text{last\_pos}) \times \alpha$$
+   ```
+   draw_pos = last_pos + (current_pos - last_pos) * alpha
+   ```
 
 ---
 
