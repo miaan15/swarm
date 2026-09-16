@@ -88,4 +88,24 @@ void collider_sys_update() {
 
         chunk_update_collider(i);
     }
+
+#ifdef BENCHMARK
+    // FIXME remove this, this is just test
+    f32 cam_x = camera_x - screen_width / camera_zoom / 2;
+    f32 cam_y = camera_y - screen_height / camera_zoom / 2;
+    f32 cam_w = screen_width  / camera_zoom;
+    f32 cam_h = screen_height / camera_zoom;
+    u32 *col_list; usize col_list_len;
+    chunk_query_collider(cam_x, cam_y, cam_w, cam_h, &col_list, &col_list_len);
+
+    for (usize i = 0; i < col_list_len; ++i) {
+        portrait *col = &portrait_sys.portrait_pool[col_list[i]];
+
+        u32 *hitted_list; usize hitted_list_len;
+        chunk_query_collider(col->x, col->y, col->w, col->h, &hitted_list, &hitted_list_len);
+
+    }
+
+    log_info("on screen: %zu entities", col_list_len);
+#endif
 }

@@ -37,9 +37,9 @@ extern void (*fn_handle_action)(action *);
 extern void (*fn_handle_status)(status *);
 
 // bench
-// #define BENCHMARK
 #ifdef BENCHMARK
-extern clock_t clocks[100];
+#include <raylib.h>
+extern double clocks[100];
 enum {
     CLOCK_START_TICK,
     CLOCK_END_TICK,
@@ -66,7 +66,7 @@ enum {
 
 #ifdef BENCHMARK
     #define SET_CLOCK(i) do { \
-        clocks[i] = clock(); \
+        clocks[i] = GetTime(); \
     } while (0)
 #else
     #define SET_CLOCK(i) do { } while (0)

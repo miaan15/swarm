@@ -32,7 +32,7 @@ static inline void _log(int level, const char* format, va_list args) {
     printf("\n");
 }
 
-static inline void log_trace(const char* format, ...) {
+static inline void log_trace([[maybe_unused]] const char* format, ...) {
 #ifndef DISABLE_LOG_TRACE
     va_list args; va_start(args, format);
     _log(_LOG_TRACE, format, args);
@@ -40,7 +40,7 @@ static inline void log_trace(const char* format, ...) {
 #endif
 }
 
-static inline void log_debug(const char* format, ...) {
+static inline void log_debug([[maybe_unused]] const char* format, ...) {
 #ifndef DISABLE_LOG_DEBUG
     va_list args; va_start(args, format);
     _log(_LOG_DEBUG, format, args);
@@ -48,7 +48,7 @@ static inline void log_debug(const char* format, ...) {
 #endif
 }
 
-static inline void log_info(const char* format, ...) {
+static inline void log_info([[maybe_unused]] const char* format, ...) {
 #ifndef DISABLE_LOG_INFO
     va_list args; va_start(args, format);
     _log(_LOG_INFO, format, args);
@@ -56,7 +56,7 @@ static inline void log_info(const char* format, ...) {
 #endif
 }
 
-static inline void log_warn(const char* format, ...) {
+static inline void log_warn([[maybe_unused]] const char* format, ...) {
 #ifndef DISABLE_LOG_WARN
     va_list args; va_start(args, format);
     _log(_LOG_WARN, format, args);
@@ -64,7 +64,7 @@ static inline void log_warn(const char* format, ...) {
 #endif
 }
 
-static inline void log_err(const char* format, ...) {
+static inline void log_err([[maybe_unused]] const char* format, ...) {
 #ifndef DISABLE_LOG_ERR
     va_list args; va_start(args, format);
     _log(_LOG_ERR, format, args);

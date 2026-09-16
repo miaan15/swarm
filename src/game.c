@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <math.h>
 
-constexpr usize NPC_COUNT = 5000;
-constexpr f32 NPC_MIN_X = -3000;
-constexpr f32 NPC_MAX_X =  3000;
-constexpr f32 NPC_MIN_Y = -3000;
-constexpr f32 NPC_MAX_Y =  3000;
+constexpr usize NPC_COUNT = 20000;
+constexpr f32 NPC_MIN_X = -10000;
+constexpr f32 NPC_MAX_X =  10000;
+constexpr f32 NPC_MIN_Y = -10000;
+constexpr f32 NPC_MAX_Y =  10000;
 
 enum {
     RACE_HUMAN,
@@ -74,7 +74,7 @@ void game_init() {
         col->offset_y = -16;
 
         // random velocity
-        f32 speed = (f32)rand() / (f32)RAND_MAX * 00.0f;
+        f32 speed = (f32)rand() / (f32)RAND_MAX * 30.0f;
         f32 angle = (f32)rand() / (f32)RAND_MAX * 6.2831853f; // 2*PI
         f32 vx = cosf(angle) * speed;
         f32 vy = sinf(angle) * speed;
@@ -92,7 +92,7 @@ void game_init() {
 
 constexpr f32 CAMERA_SPEED = 500.0f;
 constexpr f32 ZOOM_SPEED = 1.0f;
-constexpr f32 ZOOM_MIN = 0.1f;
+constexpr f32 ZOOM_MIN = 0.02f;
 constexpr f32 ZOOM_MAX = 4.0f;
 
 void game_input() {

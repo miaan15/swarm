@@ -15,7 +15,7 @@
 f32 screen_width = 1280;
 f32 screen_height = 720;
 
-u32 tick_per_second = 10;
+u32 tick_per_second = 20;
 
 // var
 arena omni_arena = {0};
@@ -43,7 +43,7 @@ void (*fn_handle_action)(action *) = {0};
 void (*fn_handle_status)(status *) = {0};
 
 // bench
-clock_t clocks[100] = {0};
+double clocks[100] = {0};
 
 // =============================================================================
 Camera2D camera = {0};
@@ -199,7 +199,9 @@ int main(void)
                 draw_present();
                 SET_CLOCK(CLOCK_END_DRAW);
 
+#ifdef DEBUG
                 handle_debug();
+#endif
             EndMode2D();
 
             DrawRectangle(0, 0, 110, 40, WHITE);
@@ -225,10 +227,10 @@ int main(void)
                 [CLOCK_START_DRAW_CALL]           = "Draw Call raylib",
             };
             for (int i = 0; i < 20; i += 2) {
-                clock_t start = clocks[i];
-                clock_t end   = clocks[i + 1];
+                double start = clocks[i];
+                double end   = clocks[i + 1];
 
-                double elapsed_ms = ((double)(end - start) / CLOCKS_PER_SEC) * 1000.0;
+                double elapsed_ms = (end - start) * 1000.0;
 
                 printf("%-20s: %.4f ms\n", CLOCK_LABELS[i], elapsed_ms);
 
