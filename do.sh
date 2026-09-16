@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# ==================================================================================
+# This was replaced by CMake for cross-platform, but still, this works fine on Linux only
+# "./do.sh" to build and run
+# ==================================================================================
+
 NAME="a"
 
 # NOTE: no hot-reload rn
