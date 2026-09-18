@@ -1,7 +1,6 @@
 package entity
 
 import "core:math"
-import "core:mem"
 import "../engine/core"
 import "../global"
 
@@ -11,7 +10,7 @@ sprite_profile :: struct {
 }
 
 sprite :: struct {
-    idx: u32,
+    key: u32,
 
     tex: u32,
     src, dest: [4]f32,
@@ -31,9 +30,7 @@ sprite_sys : struct {
     profile_list: [^]sprite_profile,
     profile_cap, profile_len: u32,
 
-    slot_pool: [^]i32,
-    list: [^]sprite,
-    cap, head, max_key, len: u32,
+    pool: pool(sprite)
 } = {}
 
 // ================================================================================================
@@ -41,17 +38,11 @@ sprite_sys_init :: proc(profile_cap, sprite_cap: u32) {
     sprite_sys.profile_list = transmute([^]sprite_profile)core.arena_alloc(&global.omni_arena, profile_cap * size_of(sprite_profile))
     sprite_sys.profile_cap = profile_cap
 
-    sprite_sys.slot_pool = transmute([^]i32)core.arena_alloc(&global.omni_arena, sprite_cap * size_of(i32))
-    sprite_sys.list = transmute([^]sprite)core.arena_alloc(&global.omni_arena, sprite_cap * size_of(sprite))
-    sprite_sys.cap = sprite_cap
-
     // stub
     sprite_sys.profile_len = 1
     sprite_sys.profile_list[0] = sprite_profile{tex = 0, rect = {0, 0, 32, 32}}
 
-    sprite_sys.head = 1
-    sprite_sys.max_key = 1
-    sprite_sys.len = 1
+    pool_init(&sprite_sys.pool, sprite_cap)
 }
 
 // ================================================================================================
@@ -80,31 +71,12 @@ sprite_profile_get :: proc(idx: u32) -> sprite_profile {
 
 // ================================================================================================
 sprite_create :: proc(profile_idx: u32, dest: [4]f32 = {0, 0, 0, 0}, z: i8 = 0) -> (_key: u32, _ptr: ^sprite) {
-    if sprite_sys.len >= sprite_sys.cap {
-        core.log_error("sprite_create: too many sprites (%d) => stub", sprite_sys.len)
-        return 0, &sprite_sys.list[0]
+    if sprite_sys.pool.len >= sprite_sys.pool.cap {
+        core.log_error("sprite_create: too many sprite (%d) => stub", sprite_sys.pool.len)
+        return 0, &sprite_sys.pool.data_list[0]
     }
 
-    if profile_idx == 0 || profile_idx >= sprite_sys.profile_len {
-        core.log_error("sprite_create: profile [%d] invalid => stub", profile_idx)
-        return 0, &sprite_sys.list[0]
-    }
-
-    key := sprite_sys.head
-    if key == sprite_sys.max_key {
-        sprite_sys.max_key += 1
-        sprite_sys.head += 1
-    } else {
-        sprite_sys.head = u32(sprite_sys.slot_pool[key])
-    }
-    sprite_sys.slot_pool[key] = -i32(sprite_sys.len)
-
-    assert(sprite_sys.len < sprite_sys.cap)
-    ptr := &sprite_sys.list[sprite_sys.len]
-    sprite_sys.len += 1
-
-    mem.zero(ptr, size_of(sprite))
-    ptr.idx = key
+    key, ptr := pool_create(&sprite_sys.pool)
 
     profile := sprite_profile_get(profile_idx)
     ptr.tex = profile.tex
@@ -119,55 +91,35 @@ sprite_create :: proc(profile_idx: u32, dest: [4]f32 = {0, 0, 0, 0}, z: i8 = 0) 
 }
 
 sprite_destroy :: proc(key: u32) {
-    if key == 0 || key >= sprite_sys.max_key {
+    if key == 0 || key >= sprite_sys.pool.max_key {
         core.log_error("sprite_destroy: sprite [%d] invalid", key)
         return
     }
-    if sprite_sys.slot_pool[key] < 0 {
+    if sprite_sys.pool.slot_pool[key] >= 0 {
         core.log_warn("sprite_destroy: sprite [%d] already dead", key)
         return
     }
-    idx := u32(-sprite_sys.slot_pool[key])
 
-    sprite_sys.slot_pool[key] = i32(sprite_sys.head)
-    sprite_sys.head = key
-
-    assert(idx < sprite_sys.len)
-    if (idx != sprite_sys.len - 1) {
-        del_ptr := &sprite_sys.list[idx]
-        repl_ptr := &sprite_sys.list[sprite_sys.len - 1]
-        repl_key := repl_ptr.idx
-        assert(repl_key < sprite_sys.max_key)
-
-        mem.copy(del_ptr, repl_ptr, size_of(sprite))
-        del_ptr.idx = repl_key
-        sprite_sys.slot_pool[repl_key] = -i32(idx)
-    }
-    sprite_sys.len -= 1
+    pool_destroy(&sprite_sys.pool, key)
 
     core.log_debug("destroyed sprite [%d]", key)
 }
 
 sprite_get :: proc(key: u32) -> ^sprite {
-    if key == 0 || key >= sprite_sys.max_key {
+    if key == 0 || key >= sprite_sys.pool.max_key {
         core.log_error("sprite_get: sprite [%d] invalid => stub", key)
-        return &sprite_sys.list[0]
+        return &sprite_sys.pool.data_list[0]
     }
-    if sprite_sys.slot_pool[key] >= 0 {
+    if sprite_sys.pool.slot_pool[key] >= 0 {
         core.log_warn("sprite_get: sprite [%d] is dead => stub", key)
-        return &sprite_sys.list[0]
+        return &sprite_sys.pool.data_list[0]
     }
 
-    idx := -sprite_sys.slot_pool[key]
-    assert(idx > 0 && idx < i32(sprite_sys.len))
-    return &sprite_sys.list[idx]
+    return pool_get(&sprite_sys.pool, key)
 }
 
 sprite_alive :: proc(key: u32) -> bool {
-    if key == 0 || key >= sprite_sys.max_key { return false }
-
-    assert(sprite_sys.slot_pool[key] > -i32(sprite_sys.len))
-    return sprite_sys.slot_pool[key] < 0
+    return pool_alive(&sprite_sys.pool, key)
 }
 
 // ================================================================================================
