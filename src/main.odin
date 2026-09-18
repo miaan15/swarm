@@ -5,6 +5,7 @@ import sdl "vendor:sdl3"
 
 import "./global"
 import "./engine"
+import "./entity"
 
 main :: proc() {
     global.init()

@@ -5,7 +5,6 @@ import "../engine/core"
 import sdl "vendor:sdl3"
 
 // CONSTANT
-ALIVE_POOL_FLAG :: 0xFFFFFFFF
 
 // SDL
 window: ^sdl.Window

@@ -52,7 +52,7 @@ texture_sys_destroy :: proc() {
 
 texture_load :: proc(path: string, scale_mode: sdl.ScaleMode = sdl.ScaleMode.NEAREST) -> u32 {
     if (texture_sys.len >= texture_sys.cap) {
-        core.log_error("texture_load: too much textures => stub")
+        core.log_error("texture_load: too much textures (%u) => stub", texture_sys.len)
         return 0
     }
 
@@ -119,7 +119,7 @@ draw_init :: proc(cap: u32) {
 
 draw_make :: proc() -> ^draw {
     if (draw_sys.len >= draw_sys.cap) {
-        core.log_error("draw_make: too much draws => nil")
+        core.log_error("draw_make: too much draws (%u) => nil", draw_sys.len)
         return nil
     }
 
@@ -134,29 +134,56 @@ draw_make :: proc() -> ^draw {
 
 draw_present :: proc() {
     RADIX_SORT_BITS :: 8
+    RADIX_SORT_COUNT :: 1 << RADIX_SORT_BITS
 
     buffer_idx := 0
 
-    // sort by .meta
-    for shift: u64 = 0; shift < 64; shift += RADIX_SORT_BITS {
-        counts: [1 << RADIX_SORT_BITS]u32
-        offs: [1 << RADIX_SORT_BITS]u32
+    // radix sort by .meta -> .type
+    { // by .type first
+        counts: [1 << 8]u32
+        offs: [1 << 8]u32
 
         for i in 0..<draw_sys.len {
-            slot := (draw_sys.buffer[buffer_idx][i].meta >> shift) & ((1 << RADIX_SORT_BITS) - 1)
-            assert(slot < (1 << RADIX_SORT_BITS))
+            slot := u8(draw_sys.buffer[buffer_idx][i].type) & ((1 << 8) - 1)
 
             counts[slot] += 1
         }
 
         offs[0] = 0
-        for i in 1..<(1 << RADIX_SORT_BITS) {
+        for i in 1..<(1 << 8) {
+            offs[i] = offs[i - 1] + counts[i - 1]
+        }
+
+        for i in 0..<draw_sys.len {
+            slot := u8(draw_sys.buffer[buffer_idx][i].type) & ((1 << 8) - 1)
+
+            assert(offs[slot] < draw_sys.len)
+            draw_sys.buffer[1 - buffer_idx][offs[slot]] = draw_sys.buffer[buffer_idx][i]
+
+            offs[slot] += 1
+        }
+
+        buffer_idx = 1 - buffer_idx
+    }
+    for shift: u64 = 0; shift < 64; shift += RADIX_SORT_BITS {
+        counts: [RADIX_SORT_COUNT]u32
+        offs: [RADIX_SORT_COUNT]u32
+
+        for i in 0..<draw_sys.len {
+            slot := (draw_sys.buffer[buffer_idx][i].meta >> shift) & ((1 << RADIX_SORT_BITS) - 1)
+            assert(slot < RADIX_SORT_COUNT)
+
+            counts[slot] += 1
+        }
+
+        offs[0] = 0
+        for i in 1..<RADIX_SORT_COUNT {
             offs[i] = offs[i - 1] + counts[i - 1]
         }
 
         for i in 0..<draw_sys.len {
             slot := (draw_sys.buffer[buffer_idx][i].meta >> shift) & ((1 << RADIX_SORT_BITS) - 1)
-            assert(slot < (1 << RADIX_SORT_BITS))
+            assert(slot < RADIX_SORT_COUNT)
 
             assert(offs[slot] < draw_sys.len)
             draw_sys.buffer[1 - buffer_idx][offs[slot]] = draw_sys.buffer[buffer_idx][i]
