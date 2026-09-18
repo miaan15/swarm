@@ -52,7 +52,7 @@ texture_sys_destroy :: proc() {
 
 texture_load :: proc(path: string, scale_mode: sdl.ScaleMode = sdl.ScaleMode.NEAREST) -> u32 {
     if (texture_sys.len >= texture_sys.cap) {
-        core.log_error("texture_load: too much textures (%u) => stub", texture_sys.len)
+        core.log_error("texture_load: too much textures (%d) => stub", texture_sys.len)
         return 0
     }
 
@@ -76,7 +76,7 @@ texture_load :: proc(path: string, scale_mode: sdl.ScaleMode = sdl.ScaleMode.NEA
 
 texture_get :: proc(idx: u32) -> ^sdl.Texture {
     if (idx == 0 || idx >= texture_sys.len) {
-        core.log_warn("texture_get: texture [%u] invalid => stub", idx)
+        core.log_warn("texture_get: texture [%d] invalid => stub", idx)
         return texture_sys.list[0]
     }
     return texture_sys.list[idx]
@@ -119,7 +119,7 @@ draw_init :: proc(cap: u32) {
 
 draw_make :: proc() -> ^draw {
     if (draw_sys.len >= draw_sys.cap) {
-        core.log_error("draw_make: too much draws (%u) => nil", draw_sys.len)
+        core.log_error("draw_make: too much draws (%d) => nil", draw_sys.len)
         return nil
     }
 

@@ -40,7 +40,7 @@ status_sys_init :: proc(cap: u32) {
 // ================================================================================================
 status_create :: proc(type: u32) -> (_idx: u32, _ptr: ^status) {
     if status_sys.len >= status_sys.cap {
-        core.log_error("status_create: too many statuses (%u) => stub", status_sys.len)
+        core.log_error("status_create: too many statuses (%d) => stub", status_sys.len)
         return 0, &status_sys.pool[0]
     }
 
@@ -63,14 +63,14 @@ status_create :: proc(type: u32) -> (_idx: u32, _ptr: ^status) {
 
     ptr.type = type
 
-    core.log_debug("created status [%u]: type = %u", idx, type)
+    core.log_debug("created status [%d]: type = %d", idx, type)
 
     return idx, ptr
 }
 
 status_destroy :: proc(idx: u32) {
     if status_sys.pool[idx].pool_flag != ALIVE_POOL_FLAG {
-        core.log_warn("status_destroy: status [%u] already dead", idx)
+        core.log_warn("status_destroy: status [%d] already dead", idx)
         return
     }
 
@@ -78,17 +78,17 @@ status_destroy :: proc(idx: u32) {
     status_sys.head = idx
     status_sys.len -= 1
 
-    core.log_debug("destroyed status [%u]", idx)
+    core.log_debug("destroyed status [%d]", idx)
 }
 
 status_get :: proc(idx: u32) -> ^status {
     if idx == 0 || idx >= status_sys.max_idx {
-        core.log_error("status_get: status [%u] invalid => stub", idx)
+        core.log_error("status_get: status [%d] invalid => stub", idx)
         return &status_sys.pool[0]
     }
 
     if status_sys.pool[idx].pool_flag != ALIVE_POOL_FLAG {
-        core.log_error("status_get: status [%u] is dead => stub", idx)
+        core.log_error("status_get: status [%d] is dead => stub", idx)
         return &status_sys.pool[0]
     }
 

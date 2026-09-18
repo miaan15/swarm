@@ -27,6 +27,56 @@ main :: proc() {
     engine.texture_sys_init(100)
     engine.draw_init(100)
 
+    entity.entity_sys_init(1000)
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_destroy(3)
+    entity._entity_sys_debug_log()
+
+    entity.entity_destroy(5)
+    entity._entity_sys_debug_log()
+
+    entity.entity_destroy(1)
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_destroy(2)
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_destroy(1)
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
+    entity.entity_destroy(4)
+    entity._entity_sys_debug_log()
+
+    entity.entity_create()
+    entity._entity_sys_debug_log()
+
     running := true
     for running {
         event: sdl.Event
