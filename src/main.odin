@@ -30,52 +30,52 @@ main :: proc() {
     entity.entity_sys_init(1000)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_destroy(3)
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_destroy(5)
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_destroy(1)
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_destroy(2)
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_destroy(1)
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_destroy(4)
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     entity.entity_create()
-    entity._entity_sys_debug_log()
+    entity._pool_debug_log(&entity.entity_sys.entity_pool)
 
     running := true
     for running {

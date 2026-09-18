@@ -1,19 +1,11 @@
 package entity
 
+import "core:fmt"
+import "core:strings"
 import "core:mem"
-import "base:intrinsics"
 import "core:reflect"
 import "../engine/core"
 import "../global"
-
-has_u32_key :: proc($T: typeid) -> bool {
-    when !intrinsics.type_is_struct(T) {
-        return false
-    } else {
-        field := reflect.struct_field_by_name(T, "key")
-        return field.type != nil && field.type.id == u32
-    }
-}
 
 pool :: struct($T: typeid) {
     slot_pool: [^]i32,
@@ -27,7 +19,7 @@ pool_init :: proc(pool: ^pool($T), cap: u32) {
     field_key := reflect.struct_field_by_name(T, "key")
     if field_key.type == nil || field_key.type.id != u32 {
         core.log_error("pool T require field .key: u32")
-        return;
+        return
     }
     pool.data_field_key_offset = field_key.offset
 
@@ -75,7 +67,7 @@ pool_destroy :: proc(pool: ^pool($T), key: u32) -> bool {
     pool.head = key
 
     assert(idx < pool.len)
-    if (idx != pool.len - 1) {
+    if idx != pool.len - 1 {
         del_ptr := &pool.data_list[idx]
         repl_ptr := &pool.data_list[pool.len - 1]
         repl_key: u32
@@ -111,3 +103,104 @@ pool_alive :: proc(pool: ^pool($T), key: u32) -> bool {
     return pool.slot_pool[key] < 0
 }
 
+// TEST
+// ================================================================================================
+_pool_validate :: proc(p: ^pool($T)) -> bool {
+    if p.len > p.cap || p.max_key > p.cap || p.len == 0 {
+        core.log_trace("pool validate: invalid bounds (len=%d, cap=%d, max_key=%d)", p.len, p.cap, p.max_key)
+        return false
+    }
+
+    cnt_alive: u32 = 0
+    max_idx: u32 = 0
+
+    for key in 1 ..< p.max_key {
+        if !pool_alive(p, key) {
+            continue
+        }
+
+        cnt_alive += 1
+        idx := u32(-p.slot_pool[key])
+
+        if idx == 0 || idx >= p.len {
+            core.log_trace("pool validate: key [%d] slot points out of range (%d)", key, p.slot_pool[key])
+            return false
+        }
+
+        data_key: u32
+        mem.copy(&data_key, rawptr(uintptr(&p.data_list[idx]) + p.data_field_key_offset), size_of(u32))
+        if data_key != key {
+            core.log_trace("pool validate: key mismatch at idx %d (expected %d, found %d)", idx, key, data_key)
+            return false
+        }
+
+        if idx > max_idx {
+            max_idx = idx
+        }
+    }
+
+    if cnt_alive != p.len - 1 {
+        core.log_trace("pool validate: alive count = %d, expected %d", cnt_alive, p.len - 1)
+        return false
+    }
+
+    if cnt_alive > 0 && max_idx != p.len - 1 {
+        core.log_trace("pool validate: max packed idx = %d, expected %d", max_idx, p.len - 1)
+        return false
+    }
+
+    visited := make([]bool, p.max_key, context.temp_allocator)
+    curr := p.head
+    for curr != 0 && curr < p.max_key {
+        if visited[curr] {
+            core.log_trace("pool validate: cycle detected in free list at key [%d]", curr)
+            return false
+        }
+        visited[curr] = true
+
+        next := p.slot_pool[curr]
+        if next < 0 {
+            core.log_trace("pool validate: active slot found inside free list at key [%d]", curr)
+            return false
+        }
+        curr = u32(next)
+    }
+
+    return true
+}
+
+_pool_debug_log :: proc(p: ^pool($T)) {
+    b := strings.builder_make(context.temp_allocator)
+
+    fmt.sbprintf(&b, "--- POOL DEBUG [len: %d, max_key: %d, cap: %d, head: %d] ---\n", p.len, p.max_key, p.cap, p.head)
+    fmt.sbprintf(&b, "STATUS: %s\n", "ok" if _pool_validate(p) else "ERROR")
+
+    // Keys row
+    fmt.sbprint(&b, "KEYS: ")
+    for key in 0 ..< p.max_key {
+        fmt.sbprintf(&b, " %2d  ", key)
+    }
+    strings.write_byte(&b, '\n')
+
+    fmt.sbprint(&b, "ACTV: ")
+    for key in 0 ..< p.max_key {
+        if pool_alive(p, key) {
+            fmt.sbprintf(&b, "[%2d] ", u32(-p.slot_pool[key]))
+        } else {
+            strings.write_string(&b, "[  ] ")
+        }
+    }
+    strings.write_byte(&b, '\n')
+
+    fmt.sbprint(&b, "FREE: ")
+    for key in 0 ..< p.max_key {
+        if !pool_alive(p, key) {
+            fmt.sbprintf(&b, "[%2d] ", u32(p.slot_pool[key]))
+        } else {
+            strings.write_string(&b, "[  ] ")
+        }
+    }
+    strings.write_byte(&b, '\n')
+
+    core.log_info("%s", strings.to_string(b))
+}
