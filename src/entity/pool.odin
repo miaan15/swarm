@@ -105,6 +105,24 @@ pool_alive :: proc(pool: ^pool($T), key: u32) -> bool {
     return pool.slot_pool[key] < 0
 }
 
+pool_iterate :: proc(pool: ^pool($T), idx: ^u32) -> (key: u32, ptr: ^T, ok: bool) {
+    if idx^ == 0 {
+        idx^ = 1
+    }
+
+    if idx^ < pool.len {
+        ptr = &pool.data_list[idx^]
+        key = ptr.key
+
+        idx^ += 1
+        ok = true
+
+        return
+    }
+
+    return 0, nil, false
+}
+
 // TEST
 // ================================================================================================
 _pool_validate :: proc(p: ^pool($T)) -> bool {

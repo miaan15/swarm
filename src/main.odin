@@ -29,6 +29,22 @@ main :: proc() {
 
     entity.entity_sys_init(1000)
 
+    entity.entity_create({3, 3})
+    entity.entity_create({2, 5})
+    entity.entity_create({-2, 3})
+
+    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
+
+    entity.entity_destroy(2)
+    entity.entity_destroy(1)
+
+    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
+
+    entity.entity_create({-2, -3})
+
+    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
+
+
     running := true
     for running {
         event: sdl.Event

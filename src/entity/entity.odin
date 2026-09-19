@@ -13,6 +13,10 @@ entity :: struct {
 
     vel: [2]f32,
 
+    last_pos: [2]f32,
+
+    chunk_key: u32,
+
     spr_begin, spr_len: u32,
     col_begin, col_len: u32,
 
@@ -21,12 +25,13 @@ entity :: struct {
 
 entity_sys : struct {
     entity_pool: pool(entity),
-    chunk_mng: chunk_mng
+    entity_chunk: chunk_mng
 } = {}
 
 // ================================================================================================
 entity_sys_init :: proc(cap: u32) {
     pool_init(&entity_sys.entity_pool, cap)
+    chunk_mng_init(&entity_sys.entity_chunk, 1024, 2048, cap)
 }
 
 // ================================================================================================
@@ -42,6 +47,8 @@ entity_create :: proc(pos: [2]f32 = {0, 0}, scale: [2]f32 = {0, 0}, z: i8 = 0) -
     ptr.scale = scale
     ptr.z = z
 
+    ptr.chunk_key, _ = chunk_mng_create(&entity_sys.entity_chunk, key, pos, {0, 0})
+
     core.log_debug("created entity [%d]: pos = (%.1f %.1f); scale = (%.1f %.1f); z = %d", key, pos[0], pos[1], scale[0], scale[1], z)
 
     return key, ptr
@@ -52,6 +59,10 @@ entity_destroy :: proc(key: u32) {
         core.log_error("entity_destroy: entity [%d] invalid (dead or worse)", key)
         return
     }
+
+    ptr := pool_get(&entity_sys.entity_pool, key)
+
+    chunk_mng_destroy(&entity_sys.entity_chunk, ptr.chunk_key)
 
     pool_destroy(&entity_sys.entity_pool, key)
 
@@ -73,6 +84,15 @@ entity_alive :: proc(key: u32) -> bool {
 
 // ================================================================================================
 entity_sys_update :: proc() {
+    _idx: u32 = 1
+    for key, ptr in pool_iterate(&entity_sys.entity_pool, &_idx) {
+        ptr.pos += ptr.vel
 
+        if ptr.pos != ptr.last_pos {
+            ptr.last_pos = ptr.pos
+
+            chunk_mng_update(&entity_sys.entity_chunk, ptr.chunk_key, ptr.pos, {0, 0})
+        }
+    }
 }
 
