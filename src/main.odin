@@ -40,10 +40,14 @@ main :: proc() {
 
     entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
 
-    entity.entity_create({-2, -3})
+    _, ptr := entity.entity_create({-2, -3})
 
     entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
 
+    ptr.vel = {0, 5}
+    entity.entity_sys_update()
+
+    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
 
     running := true
     for running {

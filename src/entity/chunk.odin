@@ -154,7 +154,7 @@ chunk_mng_destroy :: proc(mng: ^chunk_mng, key: u32) {
     pool_destroy(&mng.instance_pool, key)
 }
 
-chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_pos: [2]f32, new_extents: [2]f32) {
+chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_center: [2]f32, new_extents: [2]f32) {
     if !pool_alive(&mng.instance_pool, key) {
         core.log_error("chunk_mng_update: instance [%d] invalid (dead or worse)", key)
         return
@@ -211,13 +211,13 @@ chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_pos: [2]f32, new_extents
 
     // add new
     for i in 0..<4 {
-        corner_pos := [2]f32{ new_pos[0] + new_extents[0] * DX[i], new_pos[1] + new_extents[1] * DY[i] }
+        corner_pos := [2]f32{ new_center[0] + new_extents[0] * DX[i], new_center[1] + new_extents[1] * DY[i] }
 
         chunk_pos := _chunk_pos_cal(mng, corner_pos)
+        visited_chunk_pos[i] = chunk_pos
 
         // check if already visited
         visited := false
-        visited_chunk_pos[i] = chunk_pos
         for j in 0..<i {
             if chunk_pos == visited_chunk_pos[j] {
                 ptr.list_idx[i] = ptr.list_idx[j]
@@ -225,8 +225,8 @@ chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_pos: [2]f32, new_extents
             }
         }
 
+        // add to chunk
         if !visited {
-            // add to chunk
             chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
 
             if chunk_ptr.ins_len >= mng.chunk_max_instance {
@@ -236,11 +236,14 @@ chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_pos: [2]f32, new_extents
             }
 
             chunk_ptr.instance_list[chunk_ptr.ins_len] = key
-            chunk_ptr.ins_len += 1
-
             ptr.list_idx[i] = chunk_ptr.ins_len
+
+            chunk_ptr.ins_len += 1
         }
     }
+
+    ptr.center = new_center
+    ptr.extents = new_extents
 }
 
 chunk_mng_get :: proc(mng: ^chunk_mng, key: u32) -> ^chunk_instance {
