@@ -1,8 +1,8 @@
 package entity
 
 import "core:fmt"
-import "core:strings"
 import "core:mem"
+import "core:strings"
 import "core:reflect"
 import "../engine/core"
 import "../global"
@@ -15,6 +15,7 @@ pool :: struct($T: typeid) {
     data_field_key_offset: uintptr
 }
 
+// ================================================================================================
 pool_init :: proc(pool: ^pool($T), cap: u32) {
     field_key := reflect.struct_field_by_name(T, "key")
     if field_key.type == nil || field_key.type.id != u32 {
@@ -33,6 +34,7 @@ pool_init :: proc(pool: ^pool($T), cap: u32) {
     pool.len = 1
 }
 
+// ================================================================================================
 pool_create :: proc(pool: ^pool($T)) -> (_key: u32, _ptr: ^T) {
     if pool.len >= pool.cap {
         return 0, &pool.data_list[0]
@@ -172,7 +174,7 @@ _pool_validate :: proc(p: ^pool($T)) -> bool {
 _pool_debug_log :: proc(p: ^pool($T)) {
     b := strings.builder_make(context.temp_allocator)
 
-    fmt.sbprintf(&b, "--- POOL DEBUG [len: %d, max_key: %d, cap: %d, head: %d] ---\n", p.len, p.max_key, p.cap, p.head)
+    fmt.sbprintf(&b, "--- POOL DEBUG: len: %d; max_key: %d; cap: %d; head: %d ---\n", p.len, p.max_key, p.cap, p.head)
     fmt.sbprintf(&b, "STATUS: %s\n", "ok" if _pool_validate(p) else "ERROR")
 
     // Keys row

@@ -29,54 +29,6 @@ main :: proc() {
 
     entity.entity_sys_init(1000)
 
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_destroy(3)
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_destroy(5)
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_destroy(1)
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_destroy(2)
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_destroy(1)
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_destroy(4)
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
-    entity.entity_create()
-    entity._pool_debug_log(&entity.entity_sys.entity_pool)
-
     running := true
     for running {
         event: sdl.Event

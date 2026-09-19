@@ -20,7 +20,8 @@ entity :: struct {
 }
 
 entity_sys : struct {
-    entity_pool: pool(entity)
+    entity_pool: pool(entity),
+    chunk_mng: chunk_mng
 } = {}
 
 // ================================================================================================
