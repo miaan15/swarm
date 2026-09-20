@@ -5,11 +5,11 @@ import "core:math/rand"
 import "../engine"
 import "../entity"
 
-NPC_COUNT :: 1_000
-NPC_MIN_X :: 0_000.0
-NPC_MAX_X :: 1_000.0
-NPC_MIN_Y :: 0_000.0
-NPC_MAX_Y :: 1_000.0
+NPC_COUNT :: 40_000
+NPC_MIN_X :: -4_000.0
+NPC_MAX_X :: 4_000.0
+NPC_MIN_Y :: -4_000.0
+NPC_MAX_Y :: 4_000.0
 
 Race :: enum u32 {
     Human,
@@ -29,6 +29,7 @@ game_init :: proc() {
 
     entity.entity_sys_init(1e5)
     entity.sprite_sys_init(1e3, 1e5)
+    entity.collider_sys_init(1e5)
 
     engine.texture_load("img/char_base.png") // 1
     engine.texture_load("img/char_hair.png") // 2
@@ -58,6 +59,8 @@ game_init :: proc() {
         profile_idx := race * 2 + gender + 1
 
         entity.entity_new_sprite(ett.key, profile_idx, {-16, -16}, 0)
+
+        entity.entity_new_collider(ett.key, {32, 32}, {-16, -16})
 
         speed := rand.float32_range(0, 10.0)
         angle := rand.float32_range(0, math.TAU)

@@ -31,14 +31,12 @@ src_dir:     string
 asset_dir:   string
 
 // TIME
-time_s, time_delta_s: f32
-time_ms, time_delta_ms: u32
+time_s, time_delta_s: f64
 
-tick_total: f32
-ticK_delta_s: f32
-tick_delta_ms: u32
-tick_frame_alpha: f32
-tick_accumulate_time_ms: u32
+tick_total: f64
+tick_delta_s: f64
+tick_frame_alpha: f64
+tick_accumulate_time_s: f64
 tick_count_this_frame: u32
 
 // CONFIG

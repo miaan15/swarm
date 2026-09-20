@@ -28,7 +28,7 @@ main :: proc() {
     // INIT
     game.game_init()
 
-    time_lastframe_ms: u32 = 0
+    time_lastframe_s: f64 = 0
     running := true
     for running {
         event: sdl.Event
@@ -49,24 +49,23 @@ main :: proc() {
         core.arena_reset(global.frame_arena)
 
         // timer stuff
-        global.time_ms = u32(sdl.GetTicks())
-        global.time_delta_ms = global.time_ms - time_lastframe_ms
-        time_lastframe_ms = global.time_ms
-        global.time_s = f32(global.time_ms) / 1000
-        global.time_delta_s = f32(global.time_delta_ms) / 1000
+        global.time_s = f64(sdl.GetTicksNS()) / 1_000_000_000.0
+        global.time_delta_s = global.time_s - time_lastframe_s
+        time_lastframe_s = global.time_s
 
-        global.tick_accumulate_time_ms += global.time_delta_ms
+        global.tick_accumulate_time_s += global.time_delta_s
+
+        core.log_info("fps: %f", 1.0 / global.time_delta_s)
 
         // INPUT
         game.game_input()
 
         // tick stuff
-        global.tick_delta_ms = 1000 / global.tps
-        if global.tick_delta_ms < global.time_delta_ms { global.tick_delta_ms = global.time_delta_ms }
-        if global.tick_delta_ms > 1000 / 5 { global.tick_delta_ms = 1000 / 5 }
-        global.ticK_delta_s = f32(global.tick_delta_ms) / 1000
-        for global.tick_accumulate_time_ms > global.tick_delta_ms {
-            global.tick_accumulate_time_ms -= global.tick_delta_ms
+        if global.time_delta_s > 0.2 { global.time_delta_s = 0.2 }
+        global.tick_accumulate_time_s += global.time_delta_s
+        global.tick_delta_s = 1.0 / f64(global.tps)
+        for global.tick_accumulate_time_s > global.tick_delta_s {
+            global.tick_accumulate_time_s -= global.tick_delta_s
             global.tick_count_this_frame += 1
 
             global.tick_arena_cur_idx = 1 - global.tick_arena_cur_idx
@@ -77,7 +76,7 @@ main :: proc() {
             game.game_update()
 
             // systems
-            entity.sprite_sys_update()
+            entity.sprite_sys_update_early()
             entity.action_sys_update()
             entity.entity_sys_update()
             entity.collider_sys_update()
@@ -85,7 +84,7 @@ main :: proc() {
             // UPDATE LATE
             game.game_update_late()
         }
-        global.tick_frame_alpha = f32(global.tick_accumulate_time_ms) / f32(global.tick_delta_ms)
+        global.tick_frame_alpha = global.tick_accumulate_time_s / global.tick_delta_s
 
         // VISUAL
         game.game_visual()
@@ -102,5 +101,7 @@ main :: proc() {
         engine.draw_present()
 
         sdl.RenderPresent(global.renderer)
+
+        global.tick_count_this_frame = 0
     }
 }

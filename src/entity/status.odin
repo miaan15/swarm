@@ -4,7 +4,8 @@ import "core:mem"
 import "../engine/core"
 import "../global"
 
-ALIVE_POOL_FLAG :: 0xFFFFFFFF
+STATUS_ALIVE_POOL_FLAG :: 0xFFFFFFFF
+
 status :: struct {
     pool_flag: u32,
     idx: u32,
@@ -58,7 +59,7 @@ status_create :: proc(type: u32) -> (_idx: u32, _ptr: ^status) {
     ptr := &status_sys.pool[idx]
 
     mem.zero(ptr, size_of(status))
-    status_sys.pool[idx].pool_flag = ALIVE_POOL_FLAG
+    status_sys.pool[idx].pool_flag = STATUS_ALIVE_POOL_FLAG
     ptr.idx = idx
 
     ptr.type = type
@@ -69,7 +70,7 @@ status_create :: proc(type: u32) -> (_idx: u32, _ptr: ^status) {
 }
 
 status_destroy :: proc(idx: u32) {
-    if status_sys.pool[idx].pool_flag != ALIVE_POOL_FLAG {
+    if status_sys.pool[idx].pool_flag != STATUS_ALIVE_POOL_FLAG {
         core.log_warn("status_destroy: status [%d] already dead", idx)
         return
     }
@@ -87,7 +88,7 @@ status_get :: proc(idx: u32) -> ^status {
         return &status_sys.pool[0]
     }
 
-    if status_sys.pool[idx].pool_flag != ALIVE_POOL_FLAG {
+    if status_sys.pool[idx].pool_flag != STATUS_ALIVE_POOL_FLAG {
         core.log_error("status_get: status [%d] is dead => stub", idx)
         return &status_sys.pool[0]
     }
@@ -97,5 +98,5 @@ status_get :: proc(idx: u32) -> ^status {
 
 status_alive :: proc(idx: u32) -> bool {
     if idx == 0 || idx >= status_sys.max_idx { return false }
-    return status_sys.pool[idx].pool_flag == ALIVE_POOL_FLAG
+    return status_sys.pool[idx].pool_flag == STATUS_ALIVE_POOL_FLAG
 }

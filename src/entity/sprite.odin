@@ -94,7 +94,8 @@ sprite_create :: proc(profile_idx: u32, dest: [4]f32 = {0, 0, 0, 0}, sorting: u6
     ptr.last_tick_pos = { math.nan_f32(), math.nan_f32() }
     ptr.interpolate_pos = { dest[0], dest[1] }
 
-    ptr.chunk_key, _ = chunk_mng_create(&sprite_sys.sprite_chunk, key, ptr.interpolate_pos)
+    chunk_rect := [4]f32{ ptr.interpolate_pos[0], ptr.interpolate_pos[1], ptr.dest[2], ptr.dest[3] }
+    ptr.chunk_key, _ = chunk_mng_create(&sprite_sys.sprite_chunk, key, chunk_cal_center_rect(chunk_rect))
 
     core.log_debug("created sprite [%d]: profile = [%d]; dest = (%.1f, %.1f, %.1f, %.1f); sort = %d", key, profile_idx, dest[0], dest[1], dest[2], dest[3], sorting)
 
@@ -130,7 +131,7 @@ sprite_alive :: proc(key: u32) -> bool {
 }
 
 // ================================================================================================
-sprite_sys_update :: proc() {
+sprite_sys_update_early :: proc() {
     _idx: u32 = 1
     for key, ptr in pool_iterate(&sprite_sys.sprite_pool, &_idx) {
         if !math.is_nan(ptr.last_tick_pos[0]) && !math.is_nan(ptr.last_tick_pos[1]) {
@@ -145,14 +146,15 @@ sprite_sys_draw :: proc() {
         pos := [2]f32{ ptr.dest[0], ptr.dest[1] }
 
         if !math.is_nan(ptr.last_tick_pos[0]) && !math.is_nan(ptr.last_tick_pos[1]) {
-            ptr.interpolate_pos = ptr.last_tick_pos + (pos - ptr.last_tick_pos) * global.tick_frame_alpha
+            ptr.interpolate_pos = ptr.last_tick_pos + (pos - ptr.last_tick_pos) * f32(global.tick_frame_alpha)
         }
         else {
             ptr.interpolate_pos = pos
             ptr.last_tick_pos = pos
         }
 
-        chunk_mng_update(&sprite_sys.sprite_chunk, ptr.chunk_key, ptr.interpolate_pos)
+        chunk_rect := [4]f32{ ptr.interpolate_pos[0], ptr.interpolate_pos[1], ptr.dest[2], ptr.dest[3] }
+        chunk_mng_update(&sprite_sys.sprite_chunk, key, chunk_cal_center_rect(chunk_rect))
 
         draw := engine.draw_make()
         draw.type = .TEXTURE

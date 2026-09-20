@@ -204,6 +204,12 @@ chunk_mng_query :: proc(mng: ^chunk_mng, rect: [4]f32, arena: ^core.arena = glob
     return queried_points, queried_len
 }
 
+// UTIL
+// ================================================================================================
+chunk_cal_center_rect :: proc(rect: [4]f32) -> [2]f32 {
+    return { rect[0] + rect[2] / 2, rect[1] + rect[3] / 2 }
+}
+
 // PRIVATE
 // ================================================================================================
 _chunk_pos_cal :: proc(mng: ^chunk_mng, world_pos: [2]f32) -> [2]i32 {
