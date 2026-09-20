@@ -3,9 +3,11 @@ package main
 import "core:fmt"
 import sdl "vendor:sdl3"
 
-import "./global"
 import "./engine"
+import "./engine/core"
 import "./entity"
+import "./game"
+import "./global"
 
 main :: proc() {
     global.init()
@@ -23,32 +25,10 @@ main :: proc() {
     defer sdl.DestroyRenderer(global.renderer)
     defer sdl.DestroyWindow(global.window)
 
-    // engine init
-    engine.texture_sys_init(100)
-    engine.draw_init(100)
+    // INIT
+    game.game_init()
 
-    entity.entity_sys_init(1000)
-
-    entity.entity_create({3, 3})
-    entity.entity_create({2, 5})
-    entity.entity_create({-2, 3})
-
-    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
-
-    entity.entity_destroy(2)
-    entity.entity_destroy(1)
-
-    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
-
-    _, ptr := entity.entity_create({-2, -3})
-
-    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
-
-    ptr.vel = {0, 5}
-    entity.entity_sys_update()
-
-    entity._chunk_mng_debug_log(&entity.entity_sys.entity_chunk)
-
+    time_lastframe_ms: u32 = 0
     running := true
     for running {
         event: sdl.Event
@@ -63,22 +43,62 @@ main :: proc() {
             }
         }
 
-        sdl.SetRenderDrawColorFloat(global.renderer, 0.1, 0.1, 0.1, 1.0)
+        // swap frame arena
+        global.frame_arena_cur_idx = 1 - global.frame_arena_cur_idx
+        global.frame_arena = &global.frame_arena_raw[global.frame_arena_cur_idx]
+        core.arena_reset(global.frame_arena)
+
+        // timer stuff
+        global.time_ms = u32(sdl.GetTicks())
+        global.time_delta_ms = global.time_ms - time_lastframe_ms
+        time_lastframe_ms = global.time_ms
+        global.time_s = f32(global.time_ms) / 1000
+        global.time_delta_s = f32(global.time_delta_ms) / 1000
+
+        global.tick_accumulate_time_ms += global.time_delta_ms
+
+        // INPUT
+        game.game_input()
+
+        // tick stuff
+        global.tick_delta_ms = 1000 / global.tps
+        if global.tick_delta_ms < global.time_delta_ms { global.tick_delta_ms = global.time_delta_ms }
+        if global.tick_delta_ms > 1000 / 5 { global.tick_delta_ms = 1000 / 5 }
+        global.ticK_delta_s = f32(global.tick_delta_ms) / 1000
+        for global.tick_accumulate_time_ms > global.tick_delta_ms {
+            global.tick_accumulate_time_ms -= global.tick_delta_ms
+            global.tick_count_this_frame += 1
+
+            global.tick_arena_cur_idx = 1 - global.tick_arena_cur_idx
+            global.tick_arena = &global.tick_arena_raw[global.tick_arena_cur_idx]
+            core.arena_reset(global.tick_arena)
+
+            // UPDATE
+            game.game_update()
+
+            // systems
+            entity.action_sys_update()
+            entity.entity_sys_update()
+            entity.sprite_sys_update()
+            entity.collider_sys_update()
+
+            // UPDATE LATE
+            game.game_update_late()
+        }
+        global.tick_frame_alpha = f32(global.tick_accumulate_time_ms) / f32(global.tick_delta_ms)
+
+        // VISUAL
+        game.game_visual()
+
+        // rendering
+        sdl.SetRenderDrawColorFloat(global.renderer, 0, 0, 0, 0)
         sdl.RenderClear(global.renderer)
 
-        drw : ^engine.draw
+        // DRAW
+        game.game_draw()
 
-        drw = engine.draw_make()
-        drw.type = .BOX
-        drw.box.rect = { 100, 100, 100, 100 }
-        drw.box.color = { 50, 100, 255, 255 }
-
-        drw = engine.draw_make()
-        drw.type = .RECTANGLE
-        drw.rectangle.rect = { 300, 300, 100, 100 }
-        drw.rectangle.thickness = 10
-        drw.rectangle.color = { 255, 100, 50, 255 }
-
+        // systems
+        entity.sprite_sys_draw()
         engine.draw_present()
 
         sdl.RenderPresent(global.renderer)
