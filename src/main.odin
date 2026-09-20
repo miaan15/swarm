@@ -77,9 +77,9 @@ main :: proc() {
             game.game_update()
 
             // systems
+            entity.sprite_sys_update()
             entity.action_sys_update()
             entity.entity_sys_update()
-            entity.sprite_sys_update()
             entity.collider_sys_update()
 
             // UPDATE LATE

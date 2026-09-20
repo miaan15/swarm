@@ -67,5 +67,5 @@ init :: proc() {
     // core.log_info("%s\n%s\n%s", src_dir, project_dir, asset_dir)
 
     // CONFIG
-    tps = 20
+    tps = 5
 }

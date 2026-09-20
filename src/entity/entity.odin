@@ -40,7 +40,7 @@ entity_sys_init :: proc(cap: u32) {
 }
 
 // ================================================================================================
-entity_create :: proc(pos: [2]f32 = {0, 0}, scale: [2]f32 = {0, 0}, z: i8 = 0) -> (_key: u32, _ptr: ^entity) {
+entity_create :: proc(pos: [2]f32 = {0, 0}, scale: [2]f32 = {1, 1}, z: i8 = 0) -> (_key: u32, _ptr: ^entity) {
     if entity_sys.entity_pool.len >= entity_sys.entity_pool.cap {
         core.log_error("entity_create: too many entities (%d) => stub", entity_sys.entity_pool.len)
         return 0, &entity_sys.entity_pool.data_list[0]
@@ -120,7 +120,7 @@ entity_alive :: proc(key: u32) -> bool {
 }
 
 // ================================================================================================
-entity_create_sprite :: proc(key: u32, profile_idx: u32, offset: [2]f32 = {0, 0}, scale: [2]f32 = {1, 1}, z: i8 = 0) -> (_key: u32, _ptr: ^sprite) {
+entity_new_sprite :: proc(key: u32, profile_idx: u32, offset: [2]f32 = {0, 0}, z: i8 = 0, scale: [2]f32 = {1, 1}) -> (_key: u32, _ptr: ^sprite) {
     if !pool_alive(&entity_sys.entity_pool, key) {
         core.log_error("entity_create_sprite: entity [%d] invalid (dead or worse)", key)
         return
@@ -130,24 +130,44 @@ entity_create_sprite :: proc(key: u32, profile_idx: u32, offset: [2]f32 = {0, 0}
 
     spr_key, spr := sprite_create(profile_idx)
     spr.ett_offset = offset
-    spr.ett_scale = scale
     spr.ett_z = z
+    spr.ett_scale = scale
+
+    {
+        scale := spr.ett_scale * ptr.scale
+        spr.dest[0] = ptr.pos[0] + spr.ett_offset[0] * scale[0]
+        spr.dest[1] = ptr.pos[1] + spr.ett_offset[1] * scale[1]
+        spr.dest[2] = spr.src[2] * scale[0]
+        spr.dest[3] = spr.src[3] * scale[1]
+
+        spr.sorting = 0
+        spr.sorting |= u64(transmute(u8)ptr.z ~ 0x80) << 56
+
+        _y: u32 = transmute(u32)ptr.pos[1]
+        _y ~= (u32(-i32(_y >> 31)) | 0x80000000)
+        spr.sorting |= u64(_y) << 24
+
+        spr.sorting |= u64(transmute(u8)spr.ett_z ~ 0x80) << 16
+    }
 
     spr.ett_owner = key
 
+    // link
     spr.ett_links[0] = 0
     spr.ett_links[1] = ptr.spr_begin
 
     if ptr.spr_begin != 0 { sprite_get(ptr.spr_begin).ett_links[0] = spr_key }
 
+    ptr.spr_begin = spr_key
+
     ptr.spr_len += 1
 
-    core.log_debug("entity [%d] added sprite [%d]")
+    core.log_debug("entity [%d] added sprite [%d]: offset = (%.1f, %.1f); ; z = %d; scale = (%.1f, %.1f)", key, spr_key, offset[0], offset[1], z, scale[0], scale[1])
 
     return spr_key, spr
 }
 
-entity_create_collider :: proc(key: u32, size: [2]f32, offset: [2]f32 = {0, 0}, tag: u32 = 0) -> (_key: u32, _ptr: ^collider){
+entity_new_collider :: proc(key: u32, size: [2]f32, offset: [2]f32 = {0, 0}, tag: u32 = 0) -> (_key: u32, _ptr: ^collider){
     if !pool_alive(&entity_sys.entity_pool, key) {
         core.log_error("entity_create_collider: entity [%d] invalid (dead or worse)", key)
         return
@@ -160,21 +180,31 @@ entity_create_collider :: proc(key: u32, size: [2]f32, offset: [2]f32 = {0, 0}, 
     col.ett_offset = offset
     col.tag = tag
 
+    {
+        col.rect[0] = ptr.pos[0] + col.ett_offset[0] * ptr.scale[0]
+        col.rect[1] = ptr.pos[1] + col.ett_offset[1] * ptr.scale[1]
+        col.rect[2] = col.ett_size[0] * col.ett_offset[0]
+        col.rect[3] = col.ett_size[1] * col.ett_offset[1]
+    }
+
     col.ett_owner = key
 
+    // link
     col.ett_links[0] = 0
     col.ett_links[1] = ptr.col_begin
 
     if ptr.col_begin != 0 { collider_get(ptr.col_begin).ett_links[0] = col_key }
 
+    ptr.col_begin = col_key
+
     ptr.col_len += 1
 
-    core.log_debug("entity [%d] added collider [%d]")
+    core.log_debug("entity [%d] added collider [%d]: size = (%.1f, %.1f); offset = (%.1f, %.1f); tag = %d", key, col_key, size[0], size[1], offset[0], offset[1], tag)
 
     return col_key, col
 }
 
-entity_create_status :: proc(key: u32, type: u32) -> (_key: u32, _ptr: ^status) {
+entity_new_status :: proc(key: u32, type: u32) -> (_key: u32, _ptr: ^status) {
     if !pool_alive(&entity_sys.entity_pool, key) {
         core.log_error("entity_create_status: entity [%d] invalid (dead or worse)", key)
         return
@@ -186,14 +216,17 @@ entity_create_status :: proc(key: u32, type: u32) -> (_key: u32, _ptr: ^status) 
 
     status.ett_owner = key
 
+    // link
     status.ett_links[0] = 0
     status.ett_links[1] = ptr.status_begin
 
     if ptr.status_begin != 0 { status_get(ptr.status_begin).ett_links[0] = status_key }
 
+    ptr.status_begin = status_key
+
     ptr.status_len += 1
 
-    core.log_debug("entity [%d] added status [%d]: type = %d", type)
+    core.log_debug("entity [%d] added status [%d]: type = %d", key, status_key, type)
 
     return status_key, status
 }

@@ -1,5 +1,6 @@
 package entity
 
+import "core:math"
 import "../engine"
 import "../engine/core"
 import "../global"
@@ -27,8 +28,8 @@ sprite :: struct {
     ett_links: [2]u32,
 
     ett_offset: [2]f32,
-    ett_scale: [2]f32,
     ett_z: i8,
+    ett_scale: [2]f32,
 }
 
 sprite_sys : struct {
@@ -49,6 +50,7 @@ sprite_sys_init :: proc(profile_cap, sprite_cap: u32) {
     sprite_sys.profile_list[0] = sprite_profile{tex = 0, rect = {0, 0, 32, 32}}
 
     pool_init(&sprite_sys.sprite_pool, sprite_cap)
+    chunk_mng_init(&sprite_sys.sprite_chunk, 1024, sprite_cap)
 }
 
 // ================================================================================================
@@ -62,7 +64,7 @@ sprite_profile_create :: proc(tex: u32, rect: [4]u32) -> u32 {
     sprite_sys.profile_list[idx] = sprite_profile{tex = tex, rect = rect}
     sprite_sys.profile_len += 1
 
-    core.log_debug("created sprite profile [%d]: tex = %d, rect = (%d, %d, %d, %d)", idx, tex, rect[0], rect[1], rect[2], rect[3])
+    core.log_debug("created sprite profile [%d]: texture = [%d], rect = (%d, %d, %d, %d)", idx, tex, rect[0], rect[1], rect[2], rect[3])
 
     return idx
 }
@@ -89,11 +91,12 @@ sprite_create :: proc(profile_idx: u32, dest: [4]f32 = {0, 0, 0, 0}, sorting: u6
     ptr.src = { f32(profile.rect[0]), f32(profile.rect[1]), f32(profile.rect[2]), f32(profile.rect[3]) }
     ptr.dest = dest
     ptr.sorting = sorting
+    ptr.last_tick_pos = { math.nan_f32(), math.nan_f32() }
     ptr.interpolate_pos = { dest[0], dest[1] }
 
     ptr.chunk_key, _ = chunk_mng_create(&sprite_sys.sprite_chunk, key, ptr.interpolate_pos)
 
-    core.log_debug("created sprite [%d]: profile = [%d]; dest = [%.1f, %.1f]; sort = %d", key, dest[0], dest[1], dest[2], dest[3], sorting)
+    core.log_debug("created sprite [%d]: profile = [%d]; dest = (%.1f, %.1f, %.1f, %.1f); sort = %d", key, profile_idx, dest[0], dest[1], dest[2], dest[3], sorting)
 
     return key, ptr
 }
@@ -130,23 +133,32 @@ sprite_alive :: proc(key: u32) -> bool {
 sprite_sys_update :: proc() {
     _idx: u32 = 1
     for key, ptr in pool_iterate(&sprite_sys.sprite_pool, &_idx) {
-        pos := [2]f32{ ptr.src[0], ptr.src[1] }
-        ptr.last_tick_pos = pos
+        if !math.is_nan(ptr.last_tick_pos[0]) && !math.is_nan(ptr.last_tick_pos[1]) {
+            ptr.last_tick_pos = [2]f32{ ptr.dest[0], ptr.dest[1] }
+        }
     }
 }
 
 sprite_sys_draw :: proc() {
     _idx: u32 = 1
     for key, ptr in pool_iterate(&sprite_sys.sprite_pool, &_idx) {
-        pos := [2]f32{ ptr.src[0], ptr.src[1] }
-        ptr.interpolate_pos = (pos - ptr.last_tick_pos) * { global.tick_frame_alpha, global.tick_frame_alpha }
+        pos := [2]f32{ ptr.dest[0], ptr.dest[1] }
+
+        if !math.is_nan(ptr.last_tick_pos[0]) && !math.is_nan(ptr.last_tick_pos[1]) {
+            ptr.interpolate_pos = ptr.last_tick_pos + (pos - ptr.last_tick_pos) * global.tick_frame_alpha
+        }
+        else {
+            ptr.interpolate_pos = pos
+            ptr.last_tick_pos = pos
+        }
+
         chunk_mng_update(&sprite_sys.sprite_chunk, ptr.chunk_key, ptr.interpolate_pos)
 
         draw := engine.draw_make()
         draw.type = .TEXTURE
         draw.texture.idx = ptr.tex
         draw.texture.src = ptr.src
-        draw.texture.dest = ptr.dest
+        draw.texture.dest = { ptr.interpolate_pos[0], ptr.interpolate_pos[1], ptr.dest[2], ptr.dest[3] }
         draw.sorting = ptr.sorting
     }
 }
