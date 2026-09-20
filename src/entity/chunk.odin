@@ -58,41 +58,7 @@ chunk_mng_create :: proc(mng: ^chunk_mng, data: u32, center: [2]f32, extents: [2
     ptr.center = center
     ptr.extents = extents
 
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
-    visited_chunk_pos: [4][2]i32
-
-    for i in 0..<4 {
-        corner_pos := [2]f32{ center[0] + extents[0] * DX[i], center[1] + extents[1] * DY[i] }
-
-        chunk_pos := _chunk_pos_cal(mng, corner_pos)
-        visited_chunk_pos[i] = chunk_pos
-
-        // check if already visited
-        visited := false
-        for j in 0..<i {
-            if chunk_pos == visited_chunk_pos[j] {
-                ptr.list_idx[i] = ptr.list_idx[j]
-                visited = true
-            }
-        }
-
-        // add to chunk
-        if !visited {
-            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
-
-            if chunk_ptr.ins_len >= mng.chunk_max_instance {
-                core.log_error("chunk [%d %d] instances exceed mng.chunk_max_instance (%d)", chunk_pos[0], chunk_pos[1], mng.chunk_max_instance)
-                pool_destroy(&mng.instance_pool, key)
-                return
-            }
-
-            chunk_ptr.instance_list[chunk_ptr.ins_len] = key
-            ptr.list_idx[i] = chunk_ptr.ins_len
-
-            chunk_ptr.ins_len += 1
-        }
-    }
+    _chunk_mng_add_ins(mng, key, ptr)
 
     return key, ptr
 }
@@ -105,51 +71,7 @@ chunk_mng_destroy :: proc(mng: ^chunk_mng, key: u32) {
 
     ptr := pool_get(&mng.instance_pool, key)
 
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
-    visited_chunk_pos: [4][2]i32
-
-    for i in 0..<4 {
-        corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
-
-        chunk_pos := _chunk_pos_cal(mng, corner_pos)
-        visited_chunk_pos[i] = chunk_pos
-
-        // check if already visited
-        visited := false
-        for j in 0..<i {
-            if chunk_pos == visited_chunk_pos[j] {
-                visited = true
-            }
-        }
-
-        // remove from chunk
-        if !visited {
-            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
-
-            // replace removed <-> last
-            removed_slot := ptr.list_idx[i]
-            repl_slot := chunk_ptr.ins_len - 1
-            assert(chunk_ptr.ins_len > 0 && removed_slot <= repl_slot)
-
-            if removed_slot != repl_slot {
-                chunk_ptr.instance_list[removed_slot] = chunk_ptr.instance_list[repl_slot]
-
-                repl_ptr := pool_get(&mng.instance_pool, chunk_ptr.instance_list[repl_slot])
-                for j in 0 ..< 4 {
-                    repl_corner := [2]f32{
-                        repl_ptr.center[0] + repl_ptr.extents[0] * DX[j],
-                        repl_ptr.center[1] + repl_ptr.extents[1] * DY[j],
-                    }
-                    if _chunk_pos_cal(mng, repl_corner) == chunk_pos {
-                        repl_ptr.list_idx[j] = removed_slot
-                    }
-                }
-            }
-
-            chunk_ptr.ins_len -= 1
-        }
-    }
+    _chunk_mng_remv_ins(mng, key, ptr)
 
     pool_destroy(&mng.instance_pool, key)
 }
@@ -164,86 +86,49 @@ chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_center: [2]f32, new_exte
 
     DX: [4]f32 = { -1,  1, -1,  1 }
     DY: [4]f32 = { -1, -1,  1,  1 }
-    visited_chunk_pos: [4][2]i32
 
-    // remove old
+    old_corner_chunk_pos: [4][2]i32
     for i in 0..<4 {
         corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
-
-        chunk_pos := _chunk_pos_cal(mng, corner_pos)
-        visited_chunk_pos[i] = chunk_pos
-
-        // check if already visited
-        visited := false
-        for j in 0..<i {
-            if chunk_pos == visited_chunk_pos[j] {
-                visited = true
-            }
-        }
-
-        // remove from chunk
-        if !visited {
-            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
-
-            // replace removed <-> last
-            removed_slot := ptr.list_idx[i]
-            repl_slot := chunk_ptr.ins_len - 1
-            assert(chunk_ptr.ins_len > 0 && removed_slot <= repl_slot)
-
-            if removed_slot != repl_slot {
-                chunk_ptr.instance_list[removed_slot] = chunk_ptr.instance_list[repl_slot]
-
-                repl_ptr := pool_get(&mng.instance_pool, chunk_ptr.instance_list[repl_slot])
-                for j in 0 ..< 4 {
-                    repl_corner := [2]f32{
-                        repl_ptr.center[0] + repl_ptr.extents[0] * DX[j],
-                        repl_ptr.center[1] + repl_ptr.extents[1] * DY[j],
-                    }
-                    if _chunk_pos_cal(mng, repl_corner) == chunk_pos {
-                        repl_ptr.list_idx[j] = removed_slot
-                    }
-                }
-            }
-
-            chunk_ptr.ins_len -= 1
-        }
+        old_corner_chunk_pos[i] = _chunk_pos_cal(mng, corner_pos)
     }
 
-    // add new
+    new_corner_chunk_pos: [4][2]i32
     for i in 0..<4 {
         corner_pos := [2]f32{ new_center[0] + new_extents[0] * DX[i], new_center[1] + new_extents[1] * DY[i] }
-
-        chunk_pos := _chunk_pos_cal(mng, corner_pos)
-        visited_chunk_pos[i] = chunk_pos
-
-        // check if already visited
-        visited := false
-        for j in 0..<i {
-            if chunk_pos == visited_chunk_pos[j] {
-                ptr.list_idx[i] = ptr.list_idx[j]
-                visited = true
-            }
-        }
-
-        // add to chunk
-        if !visited {
-            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
-
-            if chunk_ptr.ins_len >= mng.chunk_max_instance {
-                core.log_error("chunk [%d %d] instances exceed mng.chunk_max_instance (%d)", chunk_pos[0], chunk_pos[1], mng.chunk_max_instance)
-                pool_destroy(&mng.instance_pool, key)
-                return
-            }
-
-            chunk_ptr.instance_list[chunk_ptr.ins_len] = key
-            ptr.list_idx[i] = chunk_ptr.ins_len
-
-            chunk_ptr.ins_len += 1
-        }
+        new_corner_chunk_pos[i] = _chunk_pos_cal(mng, corner_pos)
     }
 
-    ptr.center = new_center
-    ptr.extents = new_extents
+    corner_changed: u8
+    for i in 0..<4 { corner_changed |= (old_corner_chunk_pos[i] == new_corner_chunk_pos[i] ? 1 : 0) << uint(i) }
+
+    if corner_changed == 0xF { // nothing changes
+        // do nothing
+    } else if corner_changed == 0x0 { // everything changes
+        _chunk_mng_remv_ins(mng, key, ptr)
+
+        ptr.center = new_center
+        ptr.extents = new_extents
+
+        _chunk_mng_add_ins(mng, key, ptr)
+    } else { // partial changes
+        old_ins_in_single_chunk := true
+        for i in 0..<4 { if old_corner_chunk_pos[i] != old_corner_chunk_pos[0] { old_ins_in_single_chunk = false } }
+
+        if old_ins_in_single_chunk { // only add
+            ptr.center = new_center
+            ptr.extents = new_extents
+
+            _chunk_mng_add_ins(mng, key, ptr, ~corner_changed)
+        } else {
+            _chunk_mng_remv_ins(mng, key, ptr, ~corner_changed)
+
+            ptr.center = new_center
+            ptr.extents = new_extents
+
+            _chunk_mng_add_ins(mng, key, ptr, ~corner_changed)
+        }
+    }
 }
 
 chunk_mng_get :: proc(mng: ^chunk_mng, key: u32) -> ^chunk_instance {
@@ -262,6 +147,13 @@ chunk_mng_get :: proc(mng: ^chunk_mng, key: u32) -> ^chunk_instance {
 // ================================================================================================
 _chunk_pos_cal :: proc(mng: ^chunk_mng, world_pos: [2]f32) -> [2]i32 {
     return { i32(math.floor(world_pos[0] / mng.chunk_size)), i32(math.floor(world_pos[1] / mng.chunk_size)) }
+}
+
+_chunk_instance_in_single_chunk :: proc(mng: ^chunk_mng, center: [2]f32, extents: [2]f32) -> (_chunk_pos: [2]i32, ok: bool) {
+    tl_chunk_pos := _chunk_pos_cal(mng, center - extents)
+    br_chunk_pos := _chunk_pos_cal(mng, center + extents)
+    if tl_chunk_pos == br_chunk_pos { return tl_chunk_pos, true }
+    return tl_chunk_pos, false
 }
 
 _chunk_map_open :: proc(mng: ^chunk_mng, pos: [2]i32) -> (_idx: u32, _ptr: ^chunk_map_entry) {
@@ -284,7 +176,7 @@ _chunk_map_open :: proc(mng: ^chunk_mng, pos: [2]i32) -> (_idx: u32, _ptr: ^chun
             ptr.pos = pos
             ptr.instance_list = transmute([^]u32)core.arena_alloc(&global.omni_arena, mng.chunk_max_instance)
             ptr.ins_len = 0
-            break;
+            break
         }
         if entry.pos == pos { break; }
 
@@ -298,6 +190,96 @@ _chunk_map_open :: proc(mng: ^chunk_mng, pos: [2]i32) -> (_idx: u32, _ptr: ^chun
     }
 
     return idx, &mng.chunk_map[idx]
+}
+
+_chunk_mng_add_ins :: proc(mng: ^chunk_mng, key: u32, ptr: ^chunk_instance, ignore_mask: u8 = 0x0) {
+    DX: [4]f32 = { -1,  1, -1,  1 }
+    DY: [4]f32 = { -1, -1,  1,  1 }
+    visited_chunk_pos: [4][2]i32
+
+    for i in 0..<4 {
+        if ((ignore_mask >> uint(i)) & 1) == 1 { continue }
+        corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
+
+        chunk_pos := _chunk_pos_cal(mng, corner_pos)
+        visited_chunk_pos[i] = chunk_pos
+
+        // check if already visited
+        visited := false
+        for j in 0..<i {
+            if chunk_pos == visited_chunk_pos[j] {
+                ptr.list_idx[i] = ptr.list_idx[j]
+                visited = true
+            }
+        }
+
+        // add to chunk
+        if !visited {
+            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
+
+            if chunk_ptr.ins_len >= mng.chunk_max_instance {
+                core.log_error("chunk [%d %d] instances exceed mng.chunk_max_instance (%d)", chunk_pos[0], chunk_pos[1], mng.chunk_max_instance)
+                pool_destroy(&mng.instance_pool, key)
+                return
+            }
+
+            chunk_ptr.instance_list[chunk_ptr.ins_len] = key
+            ptr.list_idx[i] = chunk_ptr.ins_len
+
+            chunk_ptr.ins_len += 1
+        }
+    }
+}
+
+_chunk_mng_remv_ins :: proc(mng: ^chunk_mng, key: u32, ptr: ^chunk_instance, ignore_mask: u8 = 0x0) {
+    DX: [4]f32 = { -1,  1, -1,  1 }
+    DY: [4]f32 = { -1, -1,  1,  1 }
+    visited_chunk_pos: [4][2]i32
+
+    for i in 0..<4 {
+        if ((ignore_mask >> uint(i)) & 1) == 1 { continue }
+        corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
+
+        chunk_pos := _chunk_pos_cal(mng, corner_pos)
+        visited_chunk_pos[i] = chunk_pos
+
+        // check if already visited
+        visited := false
+        for j in 0..<i {
+            if chunk_pos == visited_chunk_pos[j] {
+                visited = true
+            }
+        }
+
+        // remove from chunk
+        if !visited {
+            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
+
+            // replace removed <-> last
+            removed_slot := ptr.list_idx[i]
+            repl_slot := chunk_ptr.ins_len - 1
+            assert(chunk_ptr.ins_len > 0 && removed_slot <= repl_slot)
+
+            if removed_slot != repl_slot {
+                chunk_ptr.instance_list[removed_slot] = chunk_ptr.instance_list[repl_slot]
+
+                repl_ptr := pool_get(&mng.instance_pool, chunk_ptr.instance_list[repl_slot])
+                for j in 0 ..< 4 {
+                    DX: [4]f32 = { -1,  1, -1,  1 }
+                    DY: [4]f32 = { -1, -1,  1,  1 }
+                    repl_corner := [2]f32{
+                        repl_ptr.center[0] + repl_ptr.extents[0] * DX[j],
+                        repl_ptr.center[1] + repl_ptr.extents[1] * DY[j],
+                    }
+                    if _chunk_pos_cal(mng, repl_corner) == chunk_pos {
+                        repl_ptr.list_idx[j] = removed_slot
+                    }
+                }
+            }
+
+            chunk_ptr.ins_len -= 1
+        }
+    }
 }
 
 // TEST
