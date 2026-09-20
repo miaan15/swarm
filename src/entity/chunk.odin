@@ -1,5 +1,6 @@
 package entity
 
+import "core:mem"
 import "core:fmt"
 import "core:math"
 import "core:strings"
@@ -10,21 +11,19 @@ chunk_instance :: struct {
     key: u32,
     data: u32,
     center: [2]f32,
-    extents: [2]f32,
 
-    list_idx: [4]u32,
+    links: [2]u32,
+    chunk_pos: [2]i32,
 }
 
 chunk_map_entry :: struct {
     alive: bool,
     pos: [2]i32,
 
-    instance_list: [^]u32,
-    ins_len: u32,
+    instance_begin, instance_len: u32,
 }
 chunk_mng :: struct {
     chunk_size: f32,
-    chunk_max_instance: u32,
 
     instance_pool: pool(chunk_instance),
 
@@ -33,9 +32,8 @@ chunk_mng :: struct {
 }
 
 // ================================================================================================
-chunk_mng_init :: proc(mng: ^chunk_mng, chunk_size: f32, chunk_max_instance: u32, cap: u32) {
+chunk_mng_init :: proc(mng: ^chunk_mng, chunk_size: f32, cap: u32) {
     mng.chunk_size = chunk_size
-    mng.chunk_max_instance = chunk_max_instance
 
     pool_init(&mng.instance_pool, cap)
     mng.chunk_map = transmute([^]chunk_map_entry)core.arena_alloc(&global.omni_arena, cap * size_of(chunk_map_entry))
@@ -46,21 +44,36 @@ chunk_mng_init :: proc(mng: ^chunk_mng, chunk_size: f32, chunk_max_instance: u32
 }
 
 // ================================================================================================
-chunk_mng_create :: proc(mng: ^chunk_mng, data: u32, center: [2]f32, extents: [2]f32) -> (_key: u32, _ptr: ^chunk_instance) {
+chunk_mng_create :: proc(mng: ^chunk_mng, data: u32, center: [2]f32) -> (_key: u32, _ptr: ^chunk_instance) {
     if mng.len >= mng.cap {
         core.log_error("chunk_mng_create: too many chunk points (%d) => stub", mng.len)
         return 0, &mng.instance_pool.data_list[0]
     }
 
-    key, ptr := pool_create(&mng.instance_pool)
-    ptr.data = data
-    ptr.key = key
-    ptr.center = center
-    ptr.extents = extents
+    ins_key, ins_ptr := pool_create(&mng.instance_pool)
+    ins_ptr.data = data
+    ins_ptr.key = ins_key
+    ins_ptr.center = center
 
-    _chunk_mng_add_ins(mng, key, ptr)
+    ins_ptr.chunk_pos = _chunk_pos_cal(mng, center)
 
-    return key, ptr
+    chunk_idx, chunk_ptr := _chunk_map_open(mng, ins_ptr.chunk_pos)
+
+    // linking
+    ins_ptr.links[0] = 0
+    ins_ptr.links[1] = chunk_ptr.instance_begin
+
+    if chunk_ptr.instance_begin != 0 {
+        assert(chunk_ptr.instance_begin < mng.instance_pool.max_key)
+        assert(pool_get(&mng.instance_pool, chunk_ptr.instance_begin).chunk_pos == ins_ptr.chunk_pos)
+        pool_get(&mng.instance_pool, chunk_ptr.instance_begin).links[0] = ins_key
+    }
+
+    chunk_ptr.instance_begin = ins_key
+
+    chunk_ptr.instance_len += 1
+
+    return ins_key, ins_ptr
 }
 
 chunk_mng_destroy :: proc(mng: ^chunk_mng, key: u32) {
@@ -69,65 +82,77 @@ chunk_mng_destroy :: proc(mng: ^chunk_mng, key: u32) {
         return
     }
 
-    ptr := pool_get(&mng.instance_pool, key)
+    ins_ptr := pool_get(&mng.instance_pool, key)
+    chunk_idx, chunk_ptr := _chunk_map_open(mng, ins_ptr.chunk_pos)
 
-    _chunk_mng_remv_ins(mng, key, ptr)
+    if ins_ptr.links[0] != 0 {
+        assert(ins_ptr.links[0] < mng.instance_pool.max_key)
+        assert(pool_get(&mng.instance_pool, ins_ptr.links[0]).chunk_pos == ins_ptr.chunk_pos)
+        pool_get(&mng.instance_pool, ins_ptr.links[0]).links[1] = ins_ptr.links[1]
+    }
+
+    if ins_ptr.links[1] != 0 {
+        assert(ins_ptr.links[1] < mng.instance_pool.max_key)
+        assert(pool_get(&mng.instance_pool, ins_ptr.links[1]).chunk_pos == ins_ptr.chunk_pos)
+        pool_get(&mng.instance_pool, ins_ptr.links[1]).links[0] = ins_ptr.links[0]
+    }
+
+    if chunk_ptr.instance_begin == key { chunk_ptr.instance_begin = ins_ptr.links[1] }
+
+    chunk_ptr.instance_len -= 1
 
     pool_destroy(&mng.instance_pool, key)
 }
 
-chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_center: [2]f32, new_extents: [2]f32) {
+chunk_mng_update :: proc(mng: ^chunk_mng, key: u32, new_center: [2]f32) {
     if !pool_alive(&mng.instance_pool, key) {
         core.log_error("chunk_mng_update: instance [%d] invalid (dead or worse)", key)
         return
     }
 
-    ptr := pool_get(&mng.instance_pool, key)
+    ins_ptr := pool_get(&mng.instance_pool, key)
 
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
+    new_chunk_pos := _chunk_pos_cal(mng, new_center)
+    if ins_ptr.chunk_pos == new_chunk_pos { return }
 
-    old_corner_chunk_pos: [4][2]i32
-    for i in 0..<4 {
-        corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
-        old_corner_chunk_pos[i] = _chunk_pos_cal(mng, corner_pos)
-    }
+    { // remove old
+        chunk_idx, chunk_ptr := _chunk_map_open(mng, ins_ptr.chunk_pos)
 
-    new_corner_chunk_pos: [4][2]i32
-    for i in 0..<4 {
-        corner_pos := [2]f32{ new_center[0] + new_extents[0] * DX[i], new_center[1] + new_extents[1] * DY[i] }
-        new_corner_chunk_pos[i] = _chunk_pos_cal(mng, corner_pos)
-    }
-
-    corner_changed: u8
-    for i in 0..<4 { corner_changed |= (old_corner_chunk_pos[i] == new_corner_chunk_pos[i] ? 1 : 0) << uint(i) }
-
-    if corner_changed == 0xF { // nothing changes
-        // do nothing
-    } else if corner_changed == 0x0 { // everything changes
-        _chunk_mng_remv_ins(mng, key, ptr)
-
-        ptr.center = new_center
-        ptr.extents = new_extents
-
-        _chunk_mng_add_ins(mng, key, ptr)
-    } else { // partial changes
-        old_ins_in_single_chunk := true
-        for i in 0..<4 { if old_corner_chunk_pos[i] != old_corner_chunk_pos[0] { old_ins_in_single_chunk = false } }
-
-        if old_ins_in_single_chunk { // only add
-            ptr.center = new_center
-            ptr.extents = new_extents
-
-            _chunk_mng_add_ins(mng, key, ptr, ~corner_changed)
-        } else {
-            _chunk_mng_remv_ins(mng, key, ptr, ~corner_changed)
-
-            ptr.center = new_center
-            ptr.extents = new_extents
-
-            _chunk_mng_add_ins(mng, key, ptr, ~corner_changed)
+        if ins_ptr.links[0] != 0 {
+            assert(ins_ptr.links[0] < mng.instance_pool.max_key)
+            assert(pool_get(&mng.instance_pool, ins_ptr.links[0]).chunk_pos == ins_ptr.chunk_pos)
+            pool_get(&mng.instance_pool, ins_ptr.links[0]).links[1] = ins_ptr.links[1]
         }
+
+        if ins_ptr.links[1] != 0 {
+            assert(ins_ptr.links[1] < mng.instance_pool.max_key)
+            assert(pool_get(&mng.instance_pool, ins_ptr.links[1]).chunk_pos == ins_ptr.chunk_pos)
+            pool_get(&mng.instance_pool, ins_ptr.links[1]).links[0] = ins_ptr.links[0]
+        }
+
+        if chunk_ptr.instance_begin == key { chunk_ptr.instance_begin = ins_ptr.links[1] }
+
+        chunk_ptr.instance_len -= 1
+    }
+
+    ins_ptr.center = new_center
+    ins_ptr.chunk_pos = new_chunk_pos
+
+    { // add new
+        chunk_idx, chunk_ptr := _chunk_map_open(mng, ins_ptr.chunk_pos)
+
+        ins_ptr.links[0] = 0
+        ins_ptr.links[1] = chunk_ptr.instance_begin
+
+        if chunk_ptr.instance_begin != 0 {
+            assert(chunk_ptr.instance_begin < mng.instance_pool.max_key)
+            assert(pool_get(&mng.instance_pool, chunk_ptr.instance_begin).chunk_pos == ins_ptr.chunk_pos)
+            pool_get(&mng.instance_pool, chunk_ptr.instance_begin).links[0] = key
+        }
+
+        chunk_ptr.instance_begin = key
+
+        chunk_ptr.instance_len += 1
     }
 }
 
@@ -139,9 +164,45 @@ chunk_mng_get :: proc(mng: ^chunk_mng, key: u32) -> ^chunk_instance {
     return pool_get(&mng.instance_pool, key)
 }
 
-// chunk_mng_query :: proc(mng: ^chunk_mng, rect: [4]f32) -> (queried_points: ^[^]u32, queried_len: ^u32) {
-//
-// }
+chunk_mng_query :: proc(mng: ^chunk_mng, rect: [4]f32, arena: ^core.arena = global.tick_arena) -> (_queried_points: [^]u32, _queried_len: u32) {
+    queried_points : [^]u32 = nil
+    queried_len, queried_cap: u32 = 0, 0
+
+    padding := ENTITY_MAX_BOUNDS_SIZE / 2
+    min := [2]f32{ rect[0] - padding, rect[1] - padding }
+    max := [2]f32{ rect[0] + rect[2] + padding, rect[1] + rect[3] + padding }
+
+    min_chunk := _chunk_pos_cal(mng, { min[0], min[1] })
+    max_chunk := _chunk_pos_cal(mng, { max[0], max[1] })
+
+    for cy in min_chunk[1] ..= max_chunk[1] {
+        for cx in min_chunk[0] ..= max_chunk[0] {
+            chunk_idx, chunk_ptr := _chunk_map_open(mng, [2]i32{cx, cy})
+
+            ins_key := chunk_ptr.instance_begin
+            for ins_key != 0 {
+                ins_ptr := pool_get(&mng.instance_pool, ins_key)
+
+                if ins_ptr.center[0] >= min[0] && ins_ptr.center[0] <= max[0] &&
+                   ins_ptr.center[1] >= min[1] && ins_ptr.center[1] <= max[1] {
+                    if queried_len >= queried_cap {
+                        queried_cap = queried_cap < 2 ? 2 : queried_cap * 4
+                        _new_ptr := transmute([^]u32)core.arena_alloc_raw(arena, queried_cap)
+                        if queried_points != nil { mem.copy(_new_ptr, queried_points, int(queried_len) * size_of(u32)) }
+                        queried_points = _new_ptr
+                    }
+
+                    queried_points[queried_len] = ins_key
+                    queried_len += 1
+                }
+
+                ins_key = ins_ptr.links[1]
+            }
+        }
+    }
+
+    return queried_points, queried_len
+}
 
 // PRIVATE
 // ================================================================================================
@@ -174,8 +235,6 @@ _chunk_map_open :: proc(mng: ^chunk_mng, pos: [2]i32) -> (_idx: u32, _ptr: ^chun
             ptr := &mng.chunk_map[idx]
             ptr.alive = true
             ptr.pos = pos
-            ptr.instance_list = transmute([^]u32)core.arena_alloc(&global.omni_arena, mng.chunk_max_instance)
-            ptr.ins_len = 0
             break
         }
         if entry.pos == pos { break; }
@@ -192,178 +251,126 @@ _chunk_map_open :: proc(mng: ^chunk_mng, pos: [2]i32) -> (_idx: u32, _ptr: ^chun
     return idx, &mng.chunk_map[idx]
 }
 
-_chunk_mng_add_ins :: proc(mng: ^chunk_mng, key: u32, ptr: ^chunk_instance, ignore_mask: u8 = 0x0) {
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
-    visited_chunk_pos: [4][2]i32
-
-    for i in 0..<4 {
-        if ((ignore_mask >> uint(i)) & 1) == 1 { continue }
-        corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
-
-        chunk_pos := _chunk_pos_cal(mng, corner_pos)
-        visited_chunk_pos[i] = chunk_pos
-
-        // check if already visited
-        visited := false
-        for j in 0..<i {
-            if chunk_pos == visited_chunk_pos[j] {
-                ptr.list_idx[i] = ptr.list_idx[j]
-                visited = true
-            }
-        }
-
-        // add to chunk
-        if !visited {
-            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
-
-            if chunk_ptr.ins_len >= mng.chunk_max_instance {
-                core.log_error("chunk [%d %d] instances exceed mng.chunk_max_instance (%d)", chunk_pos[0], chunk_pos[1], mng.chunk_max_instance)
-                pool_destroy(&mng.instance_pool, key)
-                return
-            }
-
-            chunk_ptr.instance_list[chunk_ptr.ins_len] = key
-            ptr.list_idx[i] = chunk_ptr.ins_len
-
-            chunk_ptr.ins_len += 1
-        }
-    }
-}
-
-_chunk_mng_remv_ins :: proc(mng: ^chunk_mng, key: u32, ptr: ^chunk_instance, ignore_mask: u8 = 0x0) {
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
-    visited_chunk_pos: [4][2]i32
-
-    for i in 0..<4 {
-        if ((ignore_mask >> uint(i)) & 1) == 1 { continue }
-        corner_pos := [2]f32{ ptr.center[0] + ptr.extents[0] * DX[i], ptr.center[1] + ptr.extents[1] * DY[i] }
-
-        chunk_pos := _chunk_pos_cal(mng, corner_pos)
-        visited_chunk_pos[i] = chunk_pos
-
-        // check if already visited
-        visited := false
-        for j in 0..<i {
-            if chunk_pos == visited_chunk_pos[j] {
-                visited = true
-            }
-        }
-
-        // remove from chunk
-        if !visited {
-            chunk_idx, chunk_ptr := _chunk_map_open(mng, chunk_pos)
-
-            // replace removed <-> last
-            removed_slot := ptr.list_idx[i]
-            repl_slot := chunk_ptr.ins_len - 1
-            assert(chunk_ptr.ins_len > 0 && removed_slot <= repl_slot)
-
-            if removed_slot != repl_slot {
-                chunk_ptr.instance_list[removed_slot] = chunk_ptr.instance_list[repl_slot]
-
-                repl_ptr := pool_get(&mng.instance_pool, chunk_ptr.instance_list[repl_slot])
-                for j in 0 ..< 4 {
-                    DX: [4]f32 = { -1,  1, -1,  1 }
-                    DY: [4]f32 = { -1, -1,  1,  1 }
-                    repl_corner := [2]f32{
-                        repl_ptr.center[0] + repl_ptr.extents[0] * DX[j],
-                        repl_ptr.center[1] + repl_ptr.extents[1] * DY[j],
-                    }
-                    if _chunk_pos_cal(mng, repl_corner) == chunk_pos {
-                        repl_ptr.list_idx[j] = removed_slot
-                    }
-                }
-            }
-
-            chunk_ptr.ins_len -= 1
-        }
-    }
-}
-
 // TEST
 // ================================================================================================
 _chunk_mng_validate :: proc(mng: ^chunk_mng) -> bool {
     if !_pool_validate(&mng.instance_pool) {
-        core.log_trace("chunk_mng validate: ins_pool failed validation")
+        core.log_trace("chunk_mng validate: instance_pool failed validation")
         return false
     }
 
-    // validate instances
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
+    total_active_instances: u32 = 0
     _idx: u32 = 0
     for ins_key, ins_ptr in pool_iterate(&mng.instance_pool, &_idx) {
-        for i in 0 ..< 4 {
-            corner_pos := [2]f32{
-                ins_ptr.center[0] + ins_ptr.extents[0] * DX[i],
-                ins_ptr.center[1] + ins_ptr.extents[1] * DY[i],
+        total_active_instances += 1
+
+        expected_chunk_pos := _chunk_pos_cal(mng, ins_ptr.center)
+        if ins_ptr.chunk_pos != expected_chunk_pos {
+            core.log_trace("chunk_mng validate: instance [%d] pos mismatch: stored [%d %d] vs computed [%d %d]",
+                ins_key, ins_ptr.chunk_pos[0], ins_ptr.chunk_pos[1], expected_chunk_pos[0], expected_chunk_pos[1])
+            return false
+        }
+
+        // prev link
+        prev_key := ins_ptr.links[0]
+        if prev_key != 0 {
+            if !pool_alive(&mng.instance_pool, prev_key) {
+                core.log_trace("chunk_mng validate: instance [%d] prev link points to dead key [%d]", ins_key, prev_key)
+                return false
             }
-            c_pos := _chunk_pos_cal(mng, corner_pos)
-
-            chunk_found := false
-            for c_idx in 1 ..< mng.cap {
-                entry := &mng.chunk_map[c_idx]
-                if entry.alive && entry.pos == c_pos {
-                    chunk_found = true
-                    slot_idx := ins_ptr.list_idx[i]
-
-                    if slot_idx >= entry.ins_len {
-                        core.log_trace("chunk_mng validate: instance [%d] corner %d list_idx (%d) >= ins_len (%d) in chunk [%d %d]",
-                            ins_key, i, slot_idx, entry.ins_len, c_pos[0], c_pos[1])
-                        return false
-                    }
-
-                    if entry.instance_list[slot_idx] != ins_key {
-                        core.log_trace("chunk_mng validate: instance [%d] slot mismatch in chunk [%d %d] at slot %d (found [%d])",
-                            ins_key, c_pos[0], c_pos[1], slot_idx, entry.instance_list[slot_idx])
-                        return false
-                    }
-                    break
-                }
+            prev_ptr := pool_get(&mng.instance_pool, prev_key)
+            if prev_ptr.links[1] != ins_key {
+                core.log_trace("chunk_mng validate: link break: [%d].links[0] = [%d], but [%d].links[1] = [%d]",
+                    ins_key, prev_key, prev_key, prev_ptr.links[1])
+                return false
             }
+            if prev_ptr.chunk_pos != ins_ptr.chunk_pos {
+                core.log_trace("chunk_mng validate: adjacent instances [%d] and [%d] have different chunk positions", ins_key, prev_key)
+                return false
+            }
+        }
 
-            if !chunk_found {
-                core.log_trace("chunk_mng validate: instance [%d] corner %d references unopened chunk [%d %d]",
-                    ins_key, i, c_pos[0], c_pos[1])
+        // next
+        next_key := ins_ptr.links[1]
+        if next_key != 0 {
+            if !pool_alive(&mng.instance_pool, next_key) {
+                core.log_trace("chunk_mng validate: instance [%d] next link points to dead key [%d]", ins_key, next_key)
+                return false
+            }
+            next_ptr := pool_get(&mng.instance_pool, next_key)
+            if next_ptr.links[0] != ins_key {
+                core.log_trace("chunk_mng validate: link break: [%d].links[1] = [%d], but [%d].links[0] = [%d]",
+                    ins_key, next_key, next_key, next_ptr.links[0])
+                return false
+            }
+            if next_ptr.chunk_pos != ins_ptr.chunk_pos {
+                core.log_trace("chunk_mng validate: adjacent instances [%d] and [%d] have different chunk positions", ins_key, next_key)
                 return false
             }
         }
     }
 
-    // validate chunks
+    //
+    total_chunk_instances: u32 = 0
+    visited := make([]bool, mng.instance_pool.max_key, context.temp_allocator)
+
     for c_idx in 1 ..< mng.cap {
         entry := &mng.chunk_map[c_idx]
         if !entry.alive {
             continue
         }
 
-        for s_idx in 0 ..< entry.ins_len {
-            key := entry.instance_list[s_idx]
-            if !pool_alive(&mng.instance_pool, key) {
-                core.log_trace("chunk_mng validate: chunk [%d %d] slot %d contains dead instance [%d]", entry.pos[0], entry.pos[1], s_idx, key)
-                return false
-            }
+        curr := entry.instance_begin
+        chunk_count: u32 = 0
 
-            ptr := pool_get(&mng.instance_pool, key)
-            matched := false
-            for i in 0 ..< 4 {
-                corner_pos := [2]f32{
-                    ptr.center[0] + ptr.extents[0] * DX[i],
-                    ptr.center[1] + ptr.extents[1] * DY[i],
-                }
-                if _chunk_pos_cal(mng, corner_pos) == entry.pos && ptr.list_idx[i] == s_idx {
-                    matched = true
-                    break
-                }
-            }
-
-            if !matched {
-                core.log_trace("chunk_mng validate: instance [%d] does not reference chunk [%d %d] slot %d", key, entry.pos[0], entry.pos[1], s_idx)
+        if curr != 0 {
+            first_ptr := pool_get(&mng.instance_pool, curr)
+            if first_ptr.links[0] != 0 {
+                core.log_trace("chunk_mng validate: chunk [%d %d] head [%d] has non-zero prev link (%d)",
+                    entry.pos[0], entry.pos[1], curr, first_ptr.links[0])
                 return false
             }
         }
+
+        for curr != 0 {
+            if !pool_alive(&mng.instance_pool, curr) {
+                core.log_trace("chunk_mng validate: chunk [%d %d] list contains dead instance [%d]",
+                    entry.pos[0], entry.pos[1], curr)
+                return false
+            }
+
+            if visited[curr] {
+                core.log_trace("chunk_mng validate: cycle detected in chunk [%d %d] list at instance [%d]",
+                    entry.pos[0], entry.pos[1], curr)
+                return false
+            }
+            visited[curr] = true
+
+            curr_ptr := pool_get(&mng.instance_pool, curr)
+            if curr_ptr.chunk_pos != entry.pos {
+                core.log_trace("chunk_mng validate: instance [%d] chunk_pos [%d %d] does not match chunk [%d %d]",
+                    curr, curr_ptr.chunk_pos[0], curr_ptr.chunk_pos[1], entry.pos[0], entry.pos[1])
+                return false
+            }
+
+            chunk_count += 1
+            curr = curr_ptr.links[1]
+        }
+
+        if chunk_count != entry.instance_len {
+            core.log_trace("chunk_mng validate: chunk [%d %d] counted %d instances but instance_len = %d",
+                entry.pos[0], entry.pos[1], chunk_count, entry.instance_len)
+            return false
+        }
+
+        total_chunk_instances += chunk_count
+    }
+
+    // no unlink
+    if total_chunk_instances != total_active_instances {
+        core.log_trace("chunk_mng validate: instances across chunks (%d) != pool active count (%d)",
+            total_chunk_instances, total_active_instances)
+        return false
     }
 
     return true
@@ -376,43 +383,32 @@ _chunk_mng_debug_log :: proc(mng: ^chunk_mng) {
         mng.len, mng.cap, mng.instance_pool.len, mng.instance_pool.cap)
     fmt.sbprintf(&b, "STATUS: %s\n", "ok" if _chunk_mng_validate(mng) else "INVALID*")
 
-    DX: [4]f32 = { -1,  1, -1,  1 }
-    DY: [4]f32 = { -1, -1,  1,  1 }
-
     for c_idx in 1 ..< mng.cap {
         entry := &mng.chunk_map[c_idx]
         if !entry.alive {
             continue
         }
 
-        fmt.sbprintf(&b, "chunk [%d %d] has %d instances:\n", entry.pos[0], entry.pos[1], entry.ins_len)
+        fmt.sbprintf(&b, "chunk [%d %d] has %d instances:\n", entry.pos[0], entry.pos[1], entry.instance_len)
 
-        for s_idx in 0 ..< entry.ins_len {
-            key := entry.instance_list[s_idx]
-            if !pool_alive(&mng.instance_pool, key) {
-                fmt.sbprintf(&b, "- instance [%d]: <DEAD/INVALID>\n", key)
-                continue
+        curr := entry.instance_begin
+        for curr != 0 {
+            if !pool_alive(&mng.instance_pool, curr) {
+                fmt.sbprintf(&b, "- instance [%d]: <DEAD/INVALID>\n", curr)
+                break
             }
 
-            ptr := pool_get(&mng.instance_pool, key)
-
-            c0 := _chunk_pos_cal(mng, { ptr.center[0] + ptr.extents[0] * DX[0], ptr.center[1] + ptr.extents[1] * DY[0] })
-            c1 := _chunk_pos_cal(mng, { ptr.center[0] + ptr.extents[0] * DX[1], ptr.center[1] + ptr.extents[1] * DY[1] })
-            c2 := _chunk_pos_cal(mng, { ptr.center[0] + ptr.extents[0] * DX[2], ptr.center[1] + ptr.extents[1] * DY[2] })
-            c3 := _chunk_pos_cal(mng, { ptr.center[0] + ptr.extents[0] * DX[3], ptr.center[1] + ptr.extents[1] * DY[3] })
-
+            ptr := pool_get(&mng.instance_pool, curr)
             fmt.sbprintf(
                 &b,
-                "- instance [%d]: data = [%d]; center = (%.1f %.1f); extents = (%.1f %.1f) in chunk [%d %d] [%d %d] [%d %d] [%d %d]\n",
-                key,
+                "- instance [%d]: data = [%d]; center = (%.1f, %.1f) in chunk [%d %d]\n",
+                curr,
                 ptr.data,
                 ptr.center[0], ptr.center[1],
-                ptr.extents[0], ptr.extents[1],
-                c0[0], c0[1],
-                c1[0], c1[1],
-                c2[0], c2[1],
-                c3[0], c3[1],
+                ptr.chunk_pos[0], ptr.chunk_pos[1],
             )
+
+            curr = ptr.links[1]
         }
     }
 

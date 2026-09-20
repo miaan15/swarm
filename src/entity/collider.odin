@@ -36,7 +36,7 @@ collider_create :: proc(rect: [4]f32 = {0, 0, 0, 0}, tag: u32 = 0) -> (_key: u32
     ptr.rect = rect
     ptr.tag = tag
 
-    core.log_debug("created collider [%d]: rect = (%.1f %.1f %.1f %.1f); tag = %d", key, rect[0], rect[1], rect[2], rect[3], tag)
+    core.log_debug("created collider [%d]: rect = (%.1f, %.1f, %.1f, %.1f); tag = %d", key, rect[0], rect[1], rect[2], rect[3], tag)
 
     return key, ptr
 }

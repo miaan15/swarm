@@ -56,7 +56,7 @@ sprite_profile_create :: proc(tex: u32, rect: [4]u32) -> u32 {
     sprite_sys.profile_list[idx] = sprite_profile{tex = tex, rect = rect}
     sprite_sys.profile_len += 1
 
-    core.log_debug("created sprite profile [%d]: tex = %d, rect = (%d %d %d %d)", idx, tex, rect[0], rect[1], rect[2], rect[3])
+    core.log_debug("created sprite profile [%d]: tex = %d, rect = (%d, %d, %d, %d)", idx, tex, rect[0], rect[1], rect[2], rect[3])
 
     return idx
 }
@@ -85,7 +85,7 @@ sprite_create :: proc(profile_idx: u32, dest: [4]f32 = {0, 0, 0, 0}, z: i8 = 0) 
     ptr.z = z
     ptr.interpolate_pos = { math.nan_f32(), math.nan_f32() }
 
-    core.log_debug("created sprite [%d]: profile = [%d]; dest = [%.1f %.1f]; z = %d", key, dest[0], dest[1], dest[2], dest[3], z)
+    core.log_debug("created sprite [%d]: profile = [%d]; dest = [%.1f, %.1f]; z = %d", key, dest[0], dest[1], dest[2], dest[3], z)
 
     return key, ptr
 }

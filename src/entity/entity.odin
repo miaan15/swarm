@@ -2,6 +2,8 @@ package entity
 
 import "../engine/core"
 
+ENTITY_MAX_BOUNDS_SIZE: f32 : 512
+
 entity :: struct {
     key: u32,
 
@@ -31,7 +33,7 @@ entity_sys : struct {
 // ================================================================================================
 entity_sys_init :: proc(cap: u32) {
     pool_init(&entity_sys.entity_pool, cap)
-    chunk_mng_init(&entity_sys.entity_chunk, 1024, 2048, cap)
+    chunk_mng_init(&entity_sys.entity_chunk, 1024, cap)
 }
 
 // ================================================================================================
@@ -47,9 +49,9 @@ entity_create :: proc(pos: [2]f32 = {0, 0}, scale: [2]f32 = {0, 0}, z: i8 = 0) -
     ptr.scale = scale
     ptr.z = z
 
-    ptr.chunk_key, _ = chunk_mng_create(&entity_sys.entity_chunk, key, pos, {0, 0})
+    ptr.chunk_key, _ = chunk_mng_create(&entity_sys.entity_chunk, key, pos)
 
-    core.log_debug("created entity [%d]: pos = (%.1f %.1f); scale = (%.1f %.1f); z = %d", key, pos[0], pos[1], scale[0], scale[1], z)
+    core.log_debug("created entity [%d]: pos = (%.1f, %.1f); scale = (%.1f, %.1f); z = %d", key, pos[0], pos[1], scale[0], scale[1], z)
 
     return key, ptr
 }
@@ -91,7 +93,7 @@ entity_sys_update :: proc() {
         if ptr.pos != ptr.last_pos {
             ptr.last_pos = ptr.pos
 
-            chunk_mng_update(&entity_sys.entity_chunk, ptr.chunk_key, ptr.pos, {0, 0})
+            chunk_mng_update(&entity_sys.entity_chunk, ptr.chunk_key, ptr.pos)
         }
     }
 }

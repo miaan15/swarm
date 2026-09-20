@@ -37,6 +37,7 @@ pool_init :: proc(pool: ^pool($T), cap: u32) {
 // ================================================================================================
 pool_create :: proc(pool: ^pool($T)) -> (_key: u32, _ptr: ^T) {
     if pool.len >= pool.cap {
+        core.log_trace("pool_create: too much (%d)", pool.len)
         return 0, &pool.data_list[0]
     }
 
@@ -60,8 +61,14 @@ pool_create :: proc(pool: ^pool($T)) -> (_key: u32, _ptr: ^T) {
 }
 
 pool_destroy :: proc(pool: ^pool($T), key: u32) -> bool {
-    if key == 0 || key >= pool.max_key { return false }
-    if pool.slot_pool[key] >= 0 { return false }
+    if key == 0 || key >= pool.max_key {
+        core.log_trace("pool_destroy: [%d] invalid", key)
+        return false
+    }
+    if pool.slot_pool[key] >= 0 {
+        core.log_trace("pool_destroy: [%d] already dead", key)
+        return false
+    }
 
     idx := u32(-pool.slot_pool[key])
 
@@ -87,9 +94,11 @@ pool_destroy :: proc(pool: ^pool($T), key: u32) -> bool {
 
 pool_get :: proc(pool: ^pool($T), key: u32) -> ^T {
     if key == 0 || key >= pool.max_key {
+        core.log_trace("pool_get: [%d] invalid => stub", key)
         return &pool.data_list[0]
     }
     if pool.slot_pool[key] >= 0 {
+        core.log_trace("pool_get: [%d] is dead => stub", key)
         return &pool.data_list[0]
     }
 
@@ -99,7 +108,10 @@ pool_get :: proc(pool: ^pool($T), key: u32) -> ^T {
 }
 
 pool_alive :: proc(pool: ^pool($T), key: u32) -> bool {
-    if key == 0 || key >= pool.max_key { return false }
+    if key == 0 || key >= pool.max_key {
+        core.log_trace("pool_alive: [%d] invalid", key)
+        return false
+    }
 
     assert(pool.slot_pool[key] > -i32(pool.len))
     return pool.slot_pool[key] < 0
