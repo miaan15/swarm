@@ -55,13 +55,11 @@ main :: proc() {
 
         global.tick_accumulate_time_s += global.time_delta_s
 
-        core.log_info("fps: %f", 1.0 / global.time_delta_s)
-
         // INPUT
         game.game_input()
 
         // tick stuff
-        if global.time_delta_s > 0.2 { global.time_delta_s = 0.2 }
+        if global.time_delta_s > 0.2 { global.time_delta_s = 0.2 } // min = 5fps
         global.tick_accumulate_time_s += global.time_delta_s
         global.tick_delta_s = 1.0 / f64(global.tps)
         for global.tick_accumulate_time_s > global.tick_delta_s {

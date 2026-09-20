@@ -183,8 +183,8 @@ entity_new_collider :: proc(key: u32, size: [2]f32, offset: [2]f32 = {0, 0}, tag
     {
         col.rect[0] = ptr.pos[0] + col.ett_offset[0] * ptr.scale[0]
         col.rect[1] = ptr.pos[1] + col.ett_offset[1] * ptr.scale[1]
-        col.rect[2] = col.ett_size[0] * col.ett_offset[0]
-        col.rect[3] = col.ett_size[1] * col.ett_offset[1]
+        col.rect[2] = col.ett_size[0] * ptr.scale[0]
+        col.rect[3] = col.ett_size[1] * ptr.scale[1]
     }
 
     col.ett_owner = key
@@ -272,8 +272,8 @@ entity_sys_update :: proc() {
 
                 col.rect[0] = ptr.pos[0] + col.ett_offset[0] * ptr.scale[0]
                 col.rect[1] = ptr.pos[1] + col.ett_offset[1] * ptr.scale[1]
-                col.rect[2] = col.ett_size[0] * col.ett_offset[0]
-                col.rect[3] = col.ett_size[1] * col.ett_offset[1]
+                col.rect[2] = col.ett_size[0] * ptr.scale[0]
+                col.rect[3] = col.ett_size[1] * ptr.scale[1]
 
                 col_key = col.ett_links[1]
             }

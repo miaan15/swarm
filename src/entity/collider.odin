@@ -1,5 +1,6 @@
 package entity
 
+import "../engine"
 import "../engine/core"
 import "../global"
 
@@ -52,7 +53,7 @@ collider_sys : struct {
 } = {}
 
 // ================================================================================================
-collider_sys_init :: proc(cap: u32, fat_aabb_offset: f32 = 4.0) {
+collider_sys_init :: proc(cap: u32, fat_aabb_offset: f32) {
     pool_init(&collider_sys.collider_pool, cap)
     chunk_mng_init(&collider_sys.collider_chunk, 1024, cap)
 
@@ -97,11 +98,6 @@ collider_destroy :: proc(key: u32) {
     }
 
     ptr := pool_get(&collider_sys.collider_pool, key)
-
-    if ptr.tree_node != 0 {
-        collider_tree_remove(ptr.tree_node, true)
-        ptr.tree_node = 0
-    }
 
     chunk_mng_destroy(&collider_sys.collider_chunk, ptr.chunk_key)
 
@@ -153,7 +149,8 @@ collider_remv_from_tree :: proc(key: u32) {
         return
     }
 
-    collider_tree_remove(key, true)
+    collider_tree_remove(col.tree_node, true)
+    col.tree_node = 0
 }
 
 // ================================================================================================
@@ -162,7 +159,14 @@ collider_sys_update :: proc() {
     for key, ptr in pool_iterate(&collider_sys.collider_pool, &_idx) {
         chunk_mng_update(&collider_sys.collider_chunk, key, chunk_cal_center_rect(ptr.rect))
 
+        if ptr.tree_node != 0 {
+            node := &collider_sys.tree_pool[ptr.tree_node]
 
+            if !_collider_rect_contains(node.rect, ptr.rect) {
+                collider_tree_remove(ptr.tree_node, false)
+                collider_tree_insert(key, false)
+            }
+        }
     }
 }
 
@@ -374,8 +378,7 @@ collider_tree_remove :: proc(node_idx: u32, destroy_node: bool) {
         // walkup
         walk_idx := grandpar_idx
         for walk_idx != 0 {
-            // how is it better
-            // walk_idx = collider_tree_balance(walk_idx)
+            walk_idx = _collider_tree_balance(walk_idx)
 
             p := &collider_sys.tree_pool[walk_idx]
             c0 := &collider_sys.tree_pool[p.child[0]]
@@ -530,3 +533,30 @@ _collider_tree_balance :: proc(iA: u32) -> u32 {
 
     return iA
 }
+
+// TEST
+// ================================================================================================
+_collider_debug_draw :: proc() {
+    if collider_sys.tree_root != 0 {
+        _collider_debug_draw_node_recursive(&collider_sys.tree_pool[collider_sys.tree_root])
+    }
+
+    _idx: u32 = 1
+    for key, ptr in pool_iterate(&collider_sys.collider_pool, &_idx) {
+        draw := engine.draw_make()
+        draw.type = .RECTANGLE
+        draw.rectangle.rect = ptr.rect
+        draw.rectangle.color = {0, 255, 0, 255}
+    }
+}
+
+_collider_debug_draw_node_recursive :: proc(node: ^collider_node) {
+    draw := engine.draw_make()
+    draw.type = .RECTANGLE
+    draw.rectangle.rect = node.rect
+    draw.rectangle.color = {255, 255, 255, 255}
+
+    if node.child[0] != 0 { _collider_debug_draw_node_recursive(&collider_sys.tree_pool[node.child[0]]) }
+    if node.child[1] != 0 { _collider_debug_draw_node_recursive(&collider_sys.tree_pool[node.child[1]]) }
+}
+
