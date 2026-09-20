@@ -61,13 +61,10 @@ init :: proc() {
     // DIRECTORY
     CURRENT_FILE :: #file
 
-    SRC_DIR      := filepath.dir(filepath.dir(CURRENT_FILE))
-    PROJECT_DIR  := filepath.dir(SRC_DIR)
-    ASSET_DIR, _ := filepath.join({PROJECT_DIR, "asset"})
-
-    src_dir     = SRC_DIR
-    project_dir = PROJECT_DIR
-    asset_dir   = ASSET_DIR
+    src_dir      = filepath.dir(filepath.dir(CURRENT_FILE))
+    project_dir  = filepath.dir(src_dir)
+    asset_dir, _ = filepath.join({project_dir, "asset"})
+    // core.log_info("%s\n%s\n%s", src_dir, project_dir, asset_dir)
 
     // CONFIG
     tps = 20

@@ -57,7 +57,7 @@ texture_load :: proc(path: string, scale_mode: sdl.ScaleMode = sdl.ScaleMode.NEA
     }
 
     full_path, _ := filepath.join({global.asset_dir, path}, context.temp_allocator)
-    full_path_cstr, _ := strings.clone_to_cstring(path, context.temp_allocator)
+    full_path_cstr, _ := strings.clone_to_cstring(full_path, context.temp_allocator)
 
     tex := img.LoadTexture(global.renderer, full_path_cstr)
     if tex == nil {
@@ -70,6 +70,8 @@ texture_load :: proc(path: string, scale_mode: sdl.ScaleMode = sdl.ScaleMode.NEA
     texture_sys.len += 1
 
     texture_sys.list[idx] = tex
+
+    core.log_debug("loaded texture [%d]: path = %s", idx, full_path)
 
     return idx
 }
@@ -85,9 +87,9 @@ texture_get :: proc(idx: u32) -> ^sdl.Texture {
 // DRAW
 // ================================================================================================
 draw :: struct {
-    meta: u64,
+    sorting: u64,
 
-    type: enum { TEXTURE, BOX, RECTANGLE, },
+    type: enum u8 { TEXTURE, BOX, RECTANGLE, },
     using _: struct #raw_union {
         texture : struct {
             idx: u32,
@@ -110,7 +112,7 @@ draw_sys : struct {
     cap, len: u32,
 } = {}
 
-draw_init :: proc(cap: u32) {
+draw_sys_init :: proc(cap: u32) {
     draw_sys.buffer[0] = transmute([^]draw)core.arena_alloc(&global.omni_arena, cap * size_of(draw))
     draw_sys.buffer[1] = transmute([^]draw)core.arena_alloc(&global.omni_arena, cap * size_of(draw))
     draw_sys.cap = cap
@@ -138,7 +140,7 @@ draw_present :: proc() {
 
     buffer_idx := 0
 
-    // radix sort by .meta -> .type
+    // radix sort by .sorting -> .type
     { // by .type first
         counts: [1 << 8]u32
         offs: [1 << 8]u32
@@ -170,7 +172,7 @@ draw_present :: proc() {
         offs: [RADIX_SORT_COUNT]u32
 
         for i in 0..<draw_sys.len {
-            slot := (draw_sys.buffer[buffer_idx][i].meta >> shift) & ((1 << RADIX_SORT_BITS) - 1)
+            slot := (draw_sys.buffer[buffer_idx][i].sorting >> shift) & ((1 << RADIX_SORT_BITS) - 1)
             assert(slot < RADIX_SORT_COUNT)
 
             counts[slot] += 1
@@ -182,7 +184,7 @@ draw_present :: proc() {
         }
 
         for i in 0..<draw_sys.len {
-            slot := (draw_sys.buffer[buffer_idx][i].meta >> shift) & ((1 << RADIX_SORT_BITS) - 1)
+            slot := (draw_sys.buffer[buffer_idx][i].sorting >> shift) & ((1 << RADIX_SORT_BITS) - 1)
             assert(slot < RADIX_SORT_COUNT)
 
             assert(offs[slot] < draw_sys.len)

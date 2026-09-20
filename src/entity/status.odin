@@ -63,7 +63,7 @@ status_create :: proc(type: u32) -> (_idx: u32, _ptr: ^status) {
 
     ptr.type = type
 
-    core.log_debug("created status [%d]: type = %d", idx, type)
+    core.log_trace("created status [%d]: type = %d", idx, type)
 
     return idx, ptr
 }
@@ -78,7 +78,7 @@ status_destroy :: proc(idx: u32) {
     status_sys.head = idx
     status_sys.len -= 1
 
-    core.log_debug("destroyed status [%d]", idx)
+    core.log_trace("destroyed status [%d]", idx)
 }
 
 status_get :: proc(idx: u32) -> ^status {
