@@ -1,7 +1,7 @@
-package main
+package src
 
 import "core:fmt"
-import sdl "vendor:sdl3"
+import sdl "./vendor/sdl3"
 
 import "./engine"
 import "./engine/core"
@@ -9,7 +9,7 @@ import "./entity"
 import "./game"
 import "./global"
 
-main :: proc() {
+main_run :: proc() {
     global.init()
 
     if !sdl.Init({.VIDEO}) {

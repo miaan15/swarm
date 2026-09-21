@@ -2,7 +2,7 @@ package global
 
 import "core:path/filepath"
 import "../engine/core"
-import sdl "vendor:sdl3"
+import sdl "../vendor/sdl3"
 
 // CONSTANT
 

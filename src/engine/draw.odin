@@ -5,8 +5,8 @@ import "../global"
 import "../engine/core"
 import "core:strings"
 import "core:path/filepath"
-import sdl "vendor:sdl3"
-import img "vendor:sdl3/image"
+import sdl "../vendor/sdl3"
+import img "../vendor/sdl3/image"
 
 // TEXTURE
 // ================================================================================================
