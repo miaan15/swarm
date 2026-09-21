@@ -2,15 +2,17 @@ package game
 
 import "core:math"
 import "core:math/rand"
+import "../engine/core"
 import "../engine"
 import "../entity"
+import "../global"
 
-NPC_COUNT :: 100
+NPC_COUNT :: 10000
 
-NPC_MIN_X :: 100
-NPC_MAX_X :: 1180
-NPC_MIN_Y :: 100
-NPC_MAX_Y :: 620
+NPC_MIN_X :: -9000
+NPC_MAX_X ::  9000
+NPC_MIN_Y :: -9000
+NPC_MAX_Y ::  9000
 
 Race :: enum u32 {
     Human,
@@ -26,7 +28,7 @@ HAIR_OFFSET_BY_RACES := [Race][2]f32{
 
 game_init :: proc() {
     engine.texture_sys_init(100)
-    engine.draw_sys_init(1e6)
+    engine.draw_sys_init(1e5)
 
     entity.entity_sys_init(1e5)
     entity.sprite_sys_init(1e3, 1e5)
@@ -74,12 +76,16 @@ game_init :: proc() {
         }
         entity.entity_new_sprite(ett.key, hair_profile_idx, hair_offset, 1)
     }
+
 }
 
 game_input :: proc() { }
-game_update :: proc() { }
+game_update :: proc() {
+}
 game_update_late :: proc() { }
-game_visual :: proc() { }
+game_visual :: proc() {
+    core.log_info("fps: %f", 1 / global.time_delta_s)
+}
 game_draw :: proc() {
-    entity._collider_debug_draw()
+    // entity._collider_debug_draw()
 }

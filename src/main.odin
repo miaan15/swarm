@@ -97,6 +97,7 @@ main :: proc() {
         // systems
         entity.sprite_sys_draw()
         engine.draw_present()
+        // engine.draw_sys.len = 0
 
         sdl.RenderPresent(global.renderer)
 

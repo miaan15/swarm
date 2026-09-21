@@ -168,6 +168,10 @@ collider_sys_update :: proc() {
             }
         }
     }
+
+    if collider_sys.tree_root != 0 {
+        _collider_tree_process_pairs(collider_sys.tree_root, collider_sys.tree_root, nil)
+    }
 }
 
 // ================================================================================================
@@ -422,8 +426,62 @@ _collider_rect_contains :: proc(fat, r: [4]f32) -> bool {
            r[1] + r[3] <= fat[1] + fat[3]
 }
 
+_collider_rect_overlaps :: proc(a, b: [4]f32) -> bool {
+    return a[0] < b[0] + b[2] &&
+           a[0] + a[2] > b[0] &&
+           a[1] < b[1] + b[3] &&
+           a[1] + a[3] > b[1]
+}
+
 _collider_node_is_leaf :: proc(idx: u32) -> bool {
     return collider_sys.tree_pool[idx].child[0] == 0
+}
+
+_collider_tree_process_pairs :: proc(idxA, idxB: u32, fn_process: proc(^collider, ^collider)) {
+    if idxA == 0 || idxB == 0 do return
+
+    nodeA := &collider_sys.tree_pool[idxA]
+    nodeB := &collider_sys.tree_pool[idxB]
+
+    if !_collider_rect_overlaps(nodeA.rect, nodeB.rect) do return
+
+    is_leafA := _collider_node_is_leaf(idxA)
+    is_leafB := _collider_node_is_leaf(idxB)
+
+    if is_leafA && is_leafB {
+        if idxA != idxB {
+            colA := collider_get(nodeA.collider_key)
+            colB := collider_get(nodeB.collider_key)
+
+            if _collider_rect_overlaps(colA.rect, colB.rect) {
+                if fn_process != nil { fn_process(colA, colB) }
+            }
+        }
+        return
+    }
+
+    // self collision
+    if idxA == idxB {
+        _collider_tree_process_pairs(nodeA.child[0], nodeA.child[0], fn_process)
+        _collider_tree_process_pairs(nodeA.child[1], nodeA.child[1], fn_process)
+        _collider_tree_process_pairs(nodeA.child[0], nodeA.child[1], fn_process)
+        return
+    }
+
+    // cross
+    if is_leafA {
+        _collider_tree_process_pairs(idxA, nodeB.child[0], fn_process)
+        _collider_tree_process_pairs(idxA, nodeB.child[1], fn_process)
+    } else if is_leafB {
+        _collider_tree_process_pairs(nodeA.child[0], idxB, fn_process)
+        _collider_tree_process_pairs(nodeA.child[1], idxB, fn_process)
+    } else if nodeA.height > nodeB.height {
+        _collider_tree_process_pairs(nodeA.child[0], idxB, fn_process)
+        _collider_tree_process_pairs(nodeA.child[1], idxB, fn_process)
+    } else {
+        _collider_tree_process_pairs(idxA, nodeB.child[0], fn_process)
+        _collider_tree_process_pairs(idxA, nodeB.child[1], fn_process)
+    }
 }
 
 _collider_tree_balance :: proc(iA: u32) -> u32 {
