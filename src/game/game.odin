@@ -7,12 +7,12 @@ import "../engine"
 import "../entity"
 import "../global"
 
-NPC_COUNT :: 10000
+NPC_COUNT :: 40_000
 
-NPC_MIN_X :: -9000
-NPC_MAX_X ::  9000
-NPC_MIN_Y :: -9000
-NPC_MAX_Y ::  9000
+NPC_MIN_X :: -10000
+NPC_MAX_X ::  12800
+NPC_MIN_Y :: -10000
+NPC_MAX_Y ::  7200
 
 Race :: enum u32 {
     Human,
