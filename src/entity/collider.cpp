@@ -23,6 +23,9 @@ import :chunk;
 
 export namespace sw {
 
+constexpr f32 COLLIDER_MAX_BOUNDS_SIZE = 256;
+constexpr f32 COLLIDER_CHUNK_SIZE = 1024;
+
 struct collider {
     u32 pool_key;
 
@@ -98,7 +101,7 @@ void _collider_debug_draw_node_recursive(collider_tree_node *node);
 
 void collider_sys_init(u32 cap, f32 fat_aabb_offset) {
     pool_init(&collider_sys.collider_pool, cap, offsetof(collider, pool_key));
-    chunk_mng_init(&collider_sys.collider_chunk, 1024, cap);
+    chunk_mng_init(&collider_sys.collider_chunk, cap, COLLIDER_CHUNK_SIZE, COLLIDER_MAX_BOUNDS_SIZE);
 
     pool_simple_init(&collider_sys.tree_node_pool, 2 * cap, offsetof(collider_tree_node, pool_key));
 
@@ -128,10 +131,10 @@ void collider_create(f32 rect[4], u32 tag, u32 *out_collider_key, collider **out
         collider_ptr->rect[2] = rect[2];
         collider_ptr->rect[3] = rect[3];
     } else {
-        collider_ptr->rect[0] = 0.0f;
-        collider_ptr->rect[1] = 0.0f;
-        collider_ptr->rect[2] = 0.0f;
-        collider_ptr->rect[3] = 0.0f;
+        collider_ptr->rect[0] = 0;
+        collider_ptr->rect[1] = 0;
+        collider_ptr->rect[2] = 0;
+        collider_ptr->rect[3] = 0;
     }
 
     collider_ptr->tag = tag;
@@ -277,8 +280,8 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
     insert_node->collider_key = collider_key;
     insert_node->collider_rect[0] = col->rect[0] - offset;
     insert_node->collider_rect[1] = col->rect[1] - offset;
-    insert_node->collider_rect[2] = col->rect[2] + 2.0f * offset;
-    insert_node->collider_rect[3] = col->rect[3] + 2.0f * offset;
+    insert_node->collider_rect[2] = col->rect[2] + 2 * offset;
+    insert_node->collider_rect[3] = col->rect[3] + 2 * offset;
     insert_node->collider_tag = col->tag;
 
     // empty tree => inserted leaf becomes root
@@ -311,11 +314,11 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
         _collider_rect_union(cur_node->collider_rect, leaf_rect, combined);
         f32 combined_area = _collider_rect_perimeter(combined);
 
-        f32 cost = 2.0f * combined_area;
-        f32 inherit_cost = 2.0f * (combined_area - area);
+        f32 cost = 2 * combined_area;
+        f32 inherit_cost = 2 * (combined_area - area);
 
         // cost if to child[0]
-        f32 cost0 = 0.0f;
+        f32 cost0 = 0;
         if (_collider_node_is_leaf(child0_idx)) {
             f32 comb0[4];
             _collider_rect_union(child0->collider_rect, leaf_rect, comb0);
@@ -329,7 +332,7 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
         }
 
         // cost if to child[1]
-        f32 cost1 = 0.0f;
+        f32 cost1 = 0;
         if (_collider_node_is_leaf(child1_idx)) {
             f32 comb1[4];
             _collider_rect_union(child1->collider_rect, leaf_rect, comb1);
@@ -472,7 +475,7 @@ void _collider_tree_remove(u32 node_idx, bool is_destroy_node) {
 // ================================================================================================
 
 f32 _collider_rect_perimeter(f32 r[4]) {
-    return 2.0f * (r[2] + r[3]);
+    return 2 * (r[2] + r[3]);
 }
 
 void _collider_rect_union(f32 a[4], f32 b[4], f32 out_r[4]) {
@@ -710,7 +713,7 @@ void _collider_debug_draw() {
             drw->rectangle.rect[1] = collider_ptr->rect[1];
             drw->rectangle.rect[2] = collider_ptr->rect[2];
             drw->rectangle.rect[3] = collider_ptr->rect[3];
-            drw->rectangle.thickness = 1.0f;
+            drw->rectangle.thickness = 1;
             drw->rectangle.color[0] = 0;
             drw->rectangle.color[1] = 255;
             drw->rectangle.color[2] = 0;
@@ -727,7 +730,7 @@ void _collider_debug_draw_node_recursive(collider_tree_node *node) {
         drw->rectangle.rect[1] = node->collider_rect[1];
         drw->rectangle.rect[2] = node->collider_rect[2];
         drw->rectangle.rect[3] = node->collider_rect[3];
-        drw->rectangle.thickness = 1.0f;
+        drw->rectangle.thickness = 1;
         drw->rectangle.color[0] = 255;
         drw->rectangle.color[1] = 255;
         drw->rectangle.color[2] = 255;

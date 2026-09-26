@@ -23,6 +23,9 @@ import :chunk;
 
 export namespace sw {
 
+constexpr f32 SPRITE_MAX_BOUNDS_SIZE = 256;
+constexpr f32 SPRITE_CHUNK_SIZE = 1024;
+
 struct sprite_profile {
     u32 texture_idx;
     u32 src_rect[4];
@@ -78,7 +81,7 @@ void sprite_sys_init(u32 profile_cap, u32 sprite_cap) {
 
     // sprite
     pool_init(&sprite_sys.sprite_pool, sprite_cap, offsetof(sprite, pool_key));
-    chunk_mng_init(&sprite_sys.sprite_chunk_mng, 1024, sprite_cap);
+    chunk_mng_init(&sprite_sys.sprite_chunk_mng, 1024, SPRITE_CHUNK_SIZE, SPRITE_MAX_BOUNDS_SIZE);
 }
 
 // ================================================================================================
@@ -141,10 +144,10 @@ void sprite_create(u32 profile_idx, f32 dest_rect[4], u64 sorting, u32 *out_spri
         sprite_ptr->dest_rect[2] = dest_rect[2];
         sprite_ptr->dest_rect[3] = dest_rect[3];
     } else {
-        sprite_ptr->dest_rect[0] = 0.0f;
-        sprite_ptr->dest_rect[1] = 0.0f;
-        sprite_ptr->dest_rect[2] = 0.0f;
-        sprite_ptr->dest_rect[3] = 0.0f;
+        sprite_ptr->dest_rect[0] = 0;
+        sprite_ptr->dest_rect[1] = 0;
+        sprite_ptr->dest_rect[2] = 0;
+        sprite_ptr->dest_rect[3] = 0;
     }
 
     sprite_ptr->sorting = sorting;

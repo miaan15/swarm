@@ -25,7 +25,8 @@ export import :status;
 
 export namespace sw {
 
-constexpr f32 ENTITY_MAX_BOUNDS_SIZE = 512.0f;
+constexpr f32 ENTITY_MAX_BOUNDS_SIZE = 256;
+constexpr f32 ENTITY_CHUNK_SIZE = 1024;
 
 struct entity {
     u32 pool_key;
@@ -63,7 +64,7 @@ struct {
 
 void entity_sys_init(u32 cap) {
     pool_init(&entity_sys.entity_pool, cap, offsetof(entity, pool_key));
-    chunk_mng_init(&entity_sys.entity_chunk_mng, 1024, cap);
+    chunk_mng_init(&entity_sys.entity_chunk_mng, cap, ENTITY_CHUNK_SIZE, ENTITY_MAX_BOUNDS_SIZE);
 }
 
 // ================================================================================================
@@ -84,16 +85,16 @@ void entity_create(f32 pos[2], f32 scale[2], i8 z, u32 *out_key, entity **out_pt
         entity_ptr->pos[0] = pos[0];
         entity_ptr->pos[1] = pos[1];
     } else {
-        entity_ptr->pos[0] = 0.0f;
-        entity_ptr->pos[1] = 0.0f;
+        entity_ptr->pos[0] = 0;
+        entity_ptr->pos[1] = 0;
     }
 
     if (scale) {
         entity_ptr->scale[0] = scale[0];
         entity_ptr->scale[1] = scale[1];
     } else {
-        entity_ptr->scale[0] = 1.0f;
-        entity_ptr->scale[1] = 1.0f;
+        entity_ptr->scale[0] = 1;
+        entity_ptr->scale[1] = 1;
     }
 
     entity_ptr->z = z;
@@ -191,8 +192,8 @@ void entity_new_sprite(u32 entity_key, u32 profile_idx, f32 offset[2], i8 z, f32
         sprite_ptr->offset_property_entity[0] = offset[0];
         sprite_ptr->offset_property_entity[1] = offset[1];
     } else {
-        sprite_ptr->offset_property_entity[0] = 0.0f;
-        sprite_ptr->offset_property_entity[1] = 0.0f;
+        sprite_ptr->offset_property_entity[0] = 0;
+        sprite_ptr->offset_property_entity[1] = 0;
     }
 
     sprite_ptr->z_property_z = z;
@@ -201,8 +202,8 @@ void entity_new_sprite(u32 entity_key, u32 profile_idx, f32 offset[2], i8 z, f32
         sprite_ptr->scale_property_entity[0] = scale[0];
         sprite_ptr->scale_property_entity[1] = scale[1];
     } else {
-        sprite_ptr->scale_property_entity[0] = 1.0f;
-        sprite_ptr->scale_property_entity[1] = 1.0f;
+        sprite_ptr->scale_property_entity[0] = 1;
+        sprite_ptr->scale_property_entity[1] = 1;
     }
 
     // calculate initial dest rect
@@ -256,8 +257,8 @@ void entity_new_collider(u32 entity_key, f32 size[2], f32 offset[2], u32 tag, u3
     entity *entity_ptr = pool_get(&entity_sys.entity_pool, entity_key);
 
     f32 offset_pos[2] = {
-        offset ? offset[0] : 0.0f,
-        offset ? offset[1] : 0.0f
+        offset ? offset[0] : 0,
+        offset ? offset[1] : 0
     };
 
     // calculate initial collider rect

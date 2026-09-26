@@ -23,8 +23,6 @@ import context;
 
 export namespace sw {
 
-constexpr f32 CHUNK_MAX_BOUNDS_SIZE = 128.0f;
-
 struct chunk_point {
     u32 pool_key;
 
@@ -47,6 +45,7 @@ struct chunk_slot {
 
 struct chunk_mng {
     f32 chunk_size;
+    f32 max_bounds_size;
 
     // all points as pool
     pool<chunk_point> point_pool;
@@ -67,12 +66,14 @@ bool _chunk_map_open(chunk_mng *mng, i32 pos[2], u32 *out_idx, chunk_slot **out_
 
 // ================================================================================================
 
-void chunk_mng_init(chunk_mng *mng, f32 chunk_size, u32 cap) {
-    mng->chunk_size = chunk_size;
+void chunk_mng_init(chunk_mng *mng, u32 cap, f32 chunk_size, f32 max_bounds_size) {
 
     pool_init(&mng->point_pool, cap, offsetof(chunk_point, pool_key));
     mng->chunk_slot_map = (chunk_slot*)arena_alloc(&omni_arena, cap * sizeof(chunk_slot));
     mng->slot_map_cap = cap;
+
+    mng->chunk_size = chunk_size;
+    mng->max_bounds_size = max_bounds_size < 0 ? chunk_size : max_bounds_size;
 
     // stub
     mng->slot_map_len = 1;
@@ -253,7 +254,7 @@ void chunk_mng_query(chunk_mng *mng, f32 rect[4], u32 **out_list, u32 *out_list_
     u32 queried_cap = 0;
 
     // pad all query with MAX_BOUNDS_SIZE
-    f32 bounds_padding = CHUNK_MAX_BOUNDS_SIZE / 2.0f;
+    f32 bounds_padding = mng->max_bounds_size / 2;
     f32 min_world_pos[2] = { rect[0] - bounds_padding, rect[1] - bounds_padding };
     f32 max_world_pos[2] = { rect[0] + rect[2] + bounds_padding, rect[1] + rect[3] + bounds_padding };
 
@@ -482,8 +483,8 @@ void _chunk_mng_debug_log(chunk_mng *mng) {
 // ================================================================================================
 
 f32* chunk_cal_center_rect(f32 rect[4], f32 out_point_pos[2]) {
-    out_point_pos[0] = rect[0] + rect[2] / 2.0f;
-    out_point_pos[1] = rect[1] + rect[3] / 2.0f;
+    out_point_pos[0] = rect[0] + rect[2] / 2;
+    out_point_pos[1] = rect[1] + rect[3] / 2;
     return out_point_pos;
 }
 
