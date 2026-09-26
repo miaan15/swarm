@@ -1,8 +1,9 @@
 # SWARM
 
 ## Run
-require `cmake`, `clang`, `ninja`, `C++20` (for C++ module feature)
+require `cmake`, `C++20`, `ninja/visual studio` (for C++ module feature)
 ```
-cmake -S . -B build -GNinja -DCMAKE_CXX_COMPILER=clang++
+cmake -B build -GNinja
 cmake --build build
+./build/swarm
 ```

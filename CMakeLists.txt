@@ -7,7 +7,7 @@ if(NOT CMAKE_GENERATOR MATCHES "Ninja|Visual Studio")
     )
 endif()
 
-project(Swarm LANGUAGES CXX)
+project(swarm LANGUAGES CXX)
 
 #
 set(CMAKE_CXX_STANDARD 20)
