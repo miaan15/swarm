@@ -164,7 +164,7 @@ void entity_destroy(u32 entity_key) {
 
 entity *entity_get(u32 entity_key) {
     if (!pool_alive(&entity_sys.entity_pool, entity_key)) {
-        log_err("entity_get: entity [%u] invalid (dead or worse) => stub", entity_key);
+        log_trace("entity_get: entity [%u] invalid (dead or worse) => stub", entity_key);
         return &entity_sys.entity_pool.data_list_ptr[0];
     }
     return pool_get(&entity_sys.entity_pool, entity_key);
@@ -178,7 +178,7 @@ bool entity_alive(u32 entity_key) {
 
 void entity_new_sprite(u32 entity_key, u32 profile_idx, f32 offset[2], i8 z, f32 scale[2], u32 *out_key, sprite **out_ptr) {
     if (!pool_alive(&entity_sys.entity_pool, entity_key)) {
-        log_err("entity_new_sprite: entity [%u] invalid (dead or worse)", entity_key);
+        log_trace("entity_new_sprite: entity [%u] invalid (dead or worse)", entity_key);
         return;
     }
 

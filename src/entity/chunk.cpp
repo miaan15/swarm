@@ -170,7 +170,7 @@ void chunk_mng_update(chunk_mng *mng, u32 point_key, f32 new_point_pos[2]) {
     // update point world pos to update its chunk pos, chunk slot,...
 
     if (!pool_alive(&mng->point_pool, point_key)) {
-        log_err("chunk_mng_update: instance [%u] invalid (dead or worse)", point_key);
+        log_trace("chunk_mng_update: instance [%u] invalid (dead or worse)", point_key);
         return;
     }
 
@@ -240,7 +240,7 @@ void chunk_mng_update(chunk_mng *mng, u32 point_key, f32 new_point_pos[2]) {
 
 chunk_point *chunk_mng_get(chunk_mng *mng, u32 point_key) {
     if (!pool_alive(&mng->point_pool, point_key)) {
-        log_err("chunk_mng_get: instance [%u] invalid (dead or worse) => stub", point_key);
+        log_trace("chunk_mng_get: instance [%u] invalid (dead or worse) => stub", point_key);
         return &mng->point_pool.data_list_ptr[0];
     }
     return pool_get(&mng->point_pool, point_key);

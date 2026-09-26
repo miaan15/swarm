@@ -103,7 +103,7 @@ u32 texture_load(const char *path, SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAR
  */
 SDL_Texture *texture_get(u32 idx) {
     if (idx == 0 || idx >= texture_sys.texture_list_len) {
-        log_warn("texture_get: texture [%u] invalid => stub", idx);
+        log_trace("texture_get: texture [%u] invalid => stub", idx);
         return texture_sys.texture_list_ptr[0];
     }
     return texture_sys.texture_list_ptr[idx];

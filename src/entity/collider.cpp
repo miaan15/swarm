@@ -176,7 +176,7 @@ void collider_destroy(u32 collider_key) {
 
 collider *collider_get(u32 collider_key) {
     if (!pool_alive(&collider_sys.collider_pool, collider_key)) {
-        log_err("collider_destroy: collider [%u] invalid (dead or worse) => stub", collider_key);
+        log_trace("collider_destroy: collider [%u] invalid (dead or worse) => stub", collider_key);
         return &collider_sys.collider_pool.data_list_ptr[0];
     }
 

@@ -81,7 +81,7 @@ void sprite_sys_init(u32 profile_cap, u32 sprite_cap) {
 
     // sprite
     pool_init(&sprite_sys.sprite_pool, sprite_cap, offsetof(sprite, pool_key));
-    chunk_mng_init(&sprite_sys.sprite_chunk_mng, 1024, SPRITE_CHUNK_SIZE, SPRITE_MAX_BOUNDS_SIZE);
+    chunk_mng_init(&sprite_sys.sprite_chunk_mng, sprite_cap, SPRITE_CHUNK_SIZE, SPRITE_MAX_BOUNDS_SIZE);
 }
 
 // ================================================================================================
@@ -195,7 +195,7 @@ void sprite_destroy(u32 sprite_key) {
 
 sprite *sprite_get(u32 sprite_key) {
     if (!pool_alive(&sprite_sys.sprite_pool, sprite_key)) {
-        log_err("sprite_get: sprite [%u] invalid (dead or worse) => stub", sprite_key);
+        log_trace("sprite_get: sprite [%u] invalid (dead or worse) => stub", sprite_key);
         return &sprite_sys.sprite_pool.data_list_ptr[0];
     }
     return pool_get(&sprite_sys.sprite_pool, sprite_key);
