@@ -28,7 +28,7 @@ struct status {
     u32 flag;
 
     u32 owner_entity_key;
-    u32 links_in_entity[2];
+    u32 links_in_entity_list[2];
 
     // actual data of a status
     u32 stack_count;
@@ -92,10 +92,10 @@ void status_create(u32 flag, u32 *out_key, status **out_ptr) {
     ptr->pool_key = key;
     ptr->flag = flag;
 
+    log_trace("created status [%u]: type = %u", key, flag);
+
     if (out_key) { *out_key = key; }
     if (out_ptr) { *out_ptr = ptr; }
-
-    log_trace("created status [%u]: type = %u", key, flag);
 }
 
 void status_destroy(u32 key) {

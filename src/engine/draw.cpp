@@ -12,7 +12,7 @@ module;
 #include <SDL3/SDL_render.h>
 #include <SDL3_image/SDL_image.h>
 
-export module engine;
+export module draw;
 
 import def;
 import mem;
@@ -148,6 +148,8 @@ struct {
     // 2 draw buffer for radix sort algorithm, but default just use the index-0 buffer
     u32 draw_cap;
     u32 draw_len;
+
+    draw_call stub_draw_call;
 } draw_sys = {};
 
 void draw_sys_init(u32 cap) {
@@ -159,14 +161,14 @@ void draw_sys_init(u32 cap) {
 
 /**
  * @brief allocate a new draw command in the current frame buffer
- * @return pointer to zeroed struct to fill in, or nullptr on overflow
+ * @return pointer to zeroed struct to fill in, or stub on overflow
  */
 draw_call *draw_call_make() {
     // create a draw call, the returned pointer is supposed to be modified make actual draw
 
     if (draw_sys.draw_len >= draw_sys.draw_cap) {
         log_err("draw_call_make: too many draws (%u) => nil", draw_sys.draw_len);
-        return nullptr;
+        return &draw_sys.stub_draw_call;
     }
 
     u32 idx = draw_sys.draw_len;
@@ -308,6 +310,7 @@ void draw_sys_present() {
     }
 
     draw_sys.draw_len = 0;
+    draw_sys.stub_draw_call = {};
 }
 
 }
