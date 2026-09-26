@@ -1,3 +1,8 @@
+// sparse-set + pool kind of data structure
+// - o(1) insertion, deletion, lookup
+// - linear, contigious iteration
+// - using "key", an u32, as handle to read/modify data
+
 module;
 
 #include <cassert>
@@ -5,7 +10,7 @@ module;
 #include <cstdlib>
 #include <cstring>
 
-export module entity;
+export module pool;
 
 import def;
 import mem;

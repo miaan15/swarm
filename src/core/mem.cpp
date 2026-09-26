@@ -1,3 +1,6 @@
+// memory stuff: allocator, alignment,...
+// - mostly just arena allocator here
+
 module;
 
 #include <cstddef>

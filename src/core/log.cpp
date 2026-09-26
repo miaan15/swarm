@@ -1,3 +1,6 @@
+// log, main way to print something out
+// - 5 level: TRACE, DEBUG, INFO, WARN, ERR; can be disable by flag DISABLE_LOG_... (eg -DDISABLE_LOG_TRACE)
+
 module;
 
 #include <cstdarg>
@@ -15,7 +18,6 @@ enum {
     LOG_INFO_LEVEL,
     LOG_WARN_LEVEL,
     LOG_ERR_LEVEL,
-    LOG_CRITICAL_LEVEL
 };
 
 inline const char* _log_level_str(int level) {
@@ -25,7 +27,6 @@ inline const char* _log_level_str(int level) {
         case LOG_INFO_LEVEL:     return "\033[32m"   "INFO"     "\033[0m";
         case LOG_WARN_LEVEL:     return "\033[33m"   "WARN"     "\033[0m";
         case LOG_ERR_LEVEL:      return "\033[31m"   "ERROR"    "\033[0m";
-        case LOG_CRITICAL_LEVEL: return "\033[1;31m" "CRITICAL" "\033[0m";
         default:                 return              "UNKNOWN";
     }
 }
@@ -77,15 +78,6 @@ inline void log_err([[maybe_unused]] const char* format, ...) {
     va_list args;
     va_start(args, format);
     _log(LOG_ERR_LEVEL, format, args);
-    va_end(args);
-#endif
-}
-
-inline void log_critical([[maybe_unused]] const char* format, ...) {
-#ifndef DISABLE_LOG_CRITICAL
-    va_list args;
-    va_start(args, format);
-    _log(LOG_CRITICAL_LEVEL, format, args);
     va_end(args);
 #endif
 }

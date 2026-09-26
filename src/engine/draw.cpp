@@ -1,3 +1,9 @@
+// engine main way of drawing to screen, also include texture and stuff
+// - texture: load from whatever SDL_image support, in assets/ dir
+// - draw is immediate: draw need to call every frame
+// - supposed to manually edit draw_call pointer after making it
+// - draw_call.sorting (u64) used to sort out for the final render
+
 module;
 
 #include <cassert>
@@ -112,7 +118,7 @@ enum struct draw_type : u8 {
     TEXTURE, BOX, RECTANGLE,
 };
 
-struct draw {
+struct draw_call {
     u64 sorting;
     draw_type type;
 
@@ -138,28 +144,28 @@ struct draw {
 };
 
 struct {
-    draw *draw_buffers[2];
+    draw_call *draw_buffers[2];
     // 2 draw buffer for radix sort algorithm, but default just use the index-0 buffer
     u32 draw_cap;
     u32 draw_len;
 } draw_sys = {};
 
 void draw_sys_init(u32 cap) {
-    draw_sys.draw_buffers[0] = (draw*)arena_alloc(&omni_arena, cap * sizeof(draw));
-    draw_sys.draw_buffers[1] = (draw*)arena_alloc(&omni_arena, cap * sizeof(draw));
+    draw_sys.draw_buffers[0] = (draw_call*)arena_alloc(&omni_arena, cap * sizeof(draw_call));
+    draw_sys.draw_buffers[1] = (draw_call*)arena_alloc(&omni_arena, cap * sizeof(draw_call));
     draw_sys.draw_cap = cap;
     draw_sys.draw_len = 0;
 }
 
 /**
  * @brief allocate a new draw command in the current frame buffer
- * @return pointer to zeroed draw struct to fill in, or nullptr on overflow
+ * @return pointer to zeroed struct to fill in, or nullptr on overflow
  */
-draw *draw_new() {
+draw_call *draw_call_make() {
     // create a draw call, the returned pointer is supposed to be modified make actual draw
 
     if (draw_sys.draw_len >= draw_sys.draw_cap) {
-        log_err("draw_make: too many draws (%u) => nil", draw_sys.draw_len);
+        log_err("draw_call_make: too many draws (%u) => nil", draw_sys.draw_len);
         return nullptr;
     }
 
@@ -167,8 +173,8 @@ draw *draw_new() {
     draw_sys.draw_len++;
 
     // append new draw command
-    draw *drw = &draw_sys.draw_buffers[0][idx];
-    memset(drw, 0, sizeof(draw));
+    draw_call *drw = &draw_sys.draw_buffers[0][idx];
+    memset(drw, 0, sizeof(draw_call));
 
     return drw;
 }
@@ -240,9 +246,9 @@ void draw_sys_present() {
     }
 
     // actual draw
-    draw *draw_buffer = draw_sys.draw_buffers[buffer_idx];
+    draw_call *draw_buffer = draw_sys.draw_buffers[buffer_idx];
     for (u32 i = 0; i < draw_sys.draw_len; ++i) {
-        draw *drw = &draw_buffer[i];
+        draw_call *drw = &draw_buffer[i];
 
         switch (drw->type) {
             case draw_type::TEXTURE: {
