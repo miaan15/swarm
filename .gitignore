@@ -1,3 +1,5 @@
-swarm
+.cache/
+
+build/
 vendor/build/
 docs/
