@@ -8,7 +8,7 @@ module;
 #include <cstddef>
 #include <cstring>
 
-export module entity:entity;
+export module entity;
 
 import def;
 import mem;
@@ -17,10 +17,11 @@ import log;
 import pool;
 import context;
 
-import :chunk;
-import :sprite;
-import :collider;
-import :status;
+export import :action;
+export import :chunk;
+export import :sprite;
+export import :collider;
+export import :status;
 
 export namespace sw {
 

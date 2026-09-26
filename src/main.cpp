@@ -5,6 +5,11 @@ import def;
 import mem;
 import context;
 
+import draw;
+import entity;
+
+import game;
+
 using namespace sw;
 
 int main(int argc, char *argv[]) {
@@ -21,7 +26,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // game_init();
+    game_init();
 
     f64 time_last_frame_sec = 0.0;
     bool running = true;
@@ -45,17 +50,17 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Swap frame arena
+        // swap frame arena
         frame_arena_cur_idx = 1 - frame_arena_cur_idx;
         frame_arena_ptr = &frame_arena_raw[frame_arena_cur_idx];
         arena_reset(frame_arena_ptr);
 
-        // Timer
+        // timer
         time_sec = static_cast<f64>(SDL_GetTicksNS()) / 1'000'000'000.0;
         time_delta_sec = time_sec - time_last_frame_sec;
         time_last_frame_sec = time_sec;
 
-        // Clamp minimum fps to 5 FPS
+        // clamp minimum fps to 5 fps
         if (time_delta_sec > 0.2) {
             time_delta_sec = 0.2;
         }
@@ -63,9 +68,9 @@ int main(int argc, char *argv[]) {
         tick_accumulated_time_sec += time_delta_sec;
 
         // Input
-        // game_input();
+        game_input();
 
-        // Fixed tick update loop
+        // fixed tick update loop
         tick_delta_sec = 1.0 / static_cast<f64>(TPS);
         while (tick_accumulated_time_sec > tick_delta_sec) {
             tick_accumulated_time_sec -= tick_delta_sec;
@@ -76,34 +81,34 @@ int main(int argc, char *argv[]) {
             tick_arena_ptr = &tick_arena_raw[tick_arena_cur_idx];
             arena_reset(tick_arena_ptr);
 
-            // Update
-            // game_update();
+            // update
+            game_update();
 
-            // Systems
-            // sprite_sys_update_early();
-            // action_sys_update();
-            // entity_sys_update();
-            // collider_sys_update();
+            // systems
+            sprite_sys_update_early();
+            action_sys_update();
+            entity_sys_update();
+            collider_sys_update();
 
-            // Update late
-            // game_update_late();
+            // update late
+            game_update_late();
         }
 
         tick_frame_alpha = tick_accumulated_time_sec / tick_delta_sec;
 
-        // Visual
-        // game_visual();
+        // visual
+        game_visual();
 
-        // Rendering
+        // rendering
         SDL_SetRenderDrawColorFloat(renderer, 0.0f, 0.0f, 0.0f, 0.0f);
         SDL_RenderClear(renderer);
 
-        // Draw
-        // game_draw();
+        // draw
+        game_draw();
 
-        // Systems
-        // sprite_sys_draw();
-        // draw_present();
+        // systems
+        sprite_sys_draw();
+        draw_sys_present();
 
         SDL_RenderPresent(renderer);
 
