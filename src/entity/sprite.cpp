@@ -113,7 +113,7 @@ sprite_profile sprite_profile_get(u32 profile_idx) {
 // ================================================================================================
 
 void sprite_create(u32 profile_idx, f32 dest_rect[4], u64 sorting, u32 *out_key, sprite **out_ptr) {
-    // create sprite from profile and register into chunk system
+    // create sprite from profile, update chunk
 
     if (sprite_sys.sprite_pool.data_list_len >= sprite_sys.sprite_pool.cap) {
         log_err("sprite_create: too many sprite (%u) => stub", sprite_sys.sprite_pool.data_list_len);
