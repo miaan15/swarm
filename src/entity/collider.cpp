@@ -4,6 +4,7 @@
 module;
 
 #include <cassert>
+#include <cstddef>
 
 export module entity:collider;
 
@@ -12,6 +13,7 @@ import mem;
 import log;
 
 import pool;
+import pool_simple;
 
 import draw;
 
@@ -20,8 +22,6 @@ import context;
 import :chunk;
 
 export namespace sw {
-
-constexpr u32 COLLIDER_ALIVE_POOL_FLAG = (u32)-1;
 
 struct collider {
     u32 pool_key;
@@ -48,8 +48,7 @@ struct collider {
 
 struct collider_tree_node {
     // all tree node actually store in a pool
-    u32 pool_flag;
-    u32 pool_idx;
+    u32 pool_key;
 
     // collider
     u32 collider_key;
@@ -68,11 +67,7 @@ struct {
     chunk_mng collider_chunk;
 
     // tree node pool
-    collider_tree_node *tree_node_pool;
-    u32 tree_node_pool_cap;
-    u32 tree_node_pool_head_key;
-    u32 tree_node_pool_max_key;
-    u32 tree_node_pool_len;
+    pool_simple<collider_tree_node> tree_node_pool;
 
     // tree
     u32 tree_root_node_idx;
@@ -89,14 +84,9 @@ bool _collider_rect_contains(f32 fat[4], f32 r[4]);
 bool _collider_rect_overlaps(f32 a[4], f32 b[4]);
 bool _collider_node_is_leaf(u32 idx);
 
-// collider node (pool stuff for collider node)
-u32 collider_node_create(u32 collider_key);
-void collider_node_destroy(u32 idx);
-void collider_node_update(u32 collider_key);
-
 // collider and tree stuff
-void collider_add_to_tree(u32 key);
-void collider_remv_from_tree(u32 key);
+void collider_add_to_tree(u32 collider_key);
+void collider_remv_from_tree(u32 collider_key);
 // helper for aboves
 u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node);
 void _collider_tree_remove(u32 node_idx, bool is_destroy_node);
@@ -107,120 +97,113 @@ void _collider_debug_draw_node_recursive(collider_tree_node *node);
 // ================================================================================================
 
 void collider_sys_init(u32 cap, f32 fat_aabb_offset) {
-    constexpr usize COLLIDER_KEY_FIELD_OFFSET = 0;
-    pool_init(&collider_sys.collider_pool, cap, COLLIDER_KEY_FIELD_OFFSET);
+    pool_init(&collider_sys.collider_pool, cap, offsetof(collider, pool_key));
     chunk_mng_init(&collider_sys.collider_chunk, 1024, cap);
 
-    collider_sys.tree_node_pool_cap = 2 * cap;
-    collider_sys.tree_node_pool = (collider_tree_node*)arena_alloc(&omni_arena, collider_sys.tree_node_pool_cap * sizeof(collider_tree_node));
+    pool_simple_init(&collider_sys.tree_node_pool, 2 * cap, offsetof(collider_tree_node, pool_key));
 
     collider_sys.fat_aabb_offset = fat_aabb_offset;
-
-    // stub
-    collider_sys.tree_node_pool_head_key = 1;
-    collider_sys.tree_node_pool_max_key = 1;
-    collider_sys.tree_node_pool_len = 1;
     collider_sys.tree_root_node_idx = 0;
 }
 
 // ================================================================================================
 
-void collider_create(f32 rect[4], u32 tag, u32 *out_key, collider **out_ptr) {
+void collider_create(f32 rect[4], u32 tag, u32 *out_collider_key, collider **out_collider_ptr) {
     // create collider, update chunk, add to BVH
 
     if (collider_sys.collider_pool.data_list_len >= collider_sys.collider_pool.cap) {
         log_err("collider_create: too many collider (%u) => stub", collider_sys.collider_pool.data_list_len);
-        if (out_key) { *out_key = 0; }
-        if (out_ptr) { *out_ptr = &collider_sys.collider_pool.data_list_ptr[0]; }
+        if (out_collider_key) { *out_collider_key = 0; }
+        if (out_collider_ptr) { *out_collider_ptr = &collider_sys.collider_pool.data_list_ptr[0]; }
         return;
     }
 
-    u32 key = 0;
-    collider *ptr = nullptr;
-    pool_create(&collider_sys.collider_pool, &key, &ptr);
+    u32 collider_key = 0;
+    collider *collider_ptr = nullptr;
+    pool_create(&collider_sys.collider_pool, &collider_key, &collider_ptr);
 
     if (rect) {
-        ptr->rect[0] = rect[0];
-        ptr->rect[1] = rect[1];
-        ptr->rect[2] = rect[2];
-        ptr->rect[3] = rect[3];
+        collider_ptr->rect[0] = rect[0];
+        collider_ptr->rect[1] = rect[1];
+        collider_ptr->rect[2] = rect[2];
+        collider_ptr->rect[3] = rect[3];
     } else {
-        ptr->rect[0] = 0.0f;
-        ptr->rect[1] = 0.0f;
-        ptr->rect[2] = 0.0f;
-        ptr->rect[3] = 0.0f;
+        collider_ptr->rect[0] = 0.0f;
+        collider_ptr->rect[1] = 0.0f;
+        collider_ptr->rect[2] = 0.0f;
+        collider_ptr->rect[3] = 0.0f;
     }
 
-    ptr->tag = tag;
-    ptr->tree_node_idx = 0;
+    collider_ptr->tag = tag;
+    collider_ptr->tree_node_idx = 0;
 
     // chunk
     f32 center_pos[2];
-    chunk_cal_center_rect(ptr->rect, center_pos);
-    chunk_mng_create(&collider_sys.collider_chunk, key, center_pos, &ptr->chunk_key, nullptr);
+    chunk_cal_center_rect(collider_ptr->rect, center_pos);
+    chunk_mng_create(&collider_sys.collider_chunk, collider_key, center_pos, &collider_ptr->chunk_key, nullptr);
 
     // add to BVH
-    collider_add_to_tree(key);
+    collider_add_to_tree(collider_key);
 
-    log_debug("created collider [%u]: rect = (%.1f, %.1f, %.1f, %.1f); tag = %u", key, ptr->rect[0], ptr->rect[1], ptr->rect[2], ptr->rect[3], tag);
+    log_debug("created collider [%u]: rect = (%.1f, %.1f, %.1f, %.1f); tag = %u", collider_key, collider_ptr->rect[0], collider_ptr->rect[1], collider_ptr->rect[2], collider_ptr->rect[3], tag);
 
-    if (out_key) { *out_key = key; }
-    if (out_ptr) { *out_ptr = ptr; }
+    if (out_collider_key) { *out_collider_key = collider_key; }
+    if (out_collider_ptr) { *out_collider_ptr = collider_ptr; }
 }
 
-void collider_destroy(u32 key) {
-    if (!pool_alive(&collider_sys.collider_pool, key)) {
-        log_err("collider_destroy: collider [%u] invalid (dead or worse)", key);
+void collider_destroy(u32 collider_key) {
+    if (!pool_alive(&collider_sys.collider_pool, collider_key)) {
+        log_err("collider_destroy: collider [%u] invalid (dead or worse)", collider_key);
         return;
     }
 
-    collider *ptr = pool_get(&collider_sys.collider_pool, key);
+    collider *collider_ptr = pool_get(&collider_sys.collider_pool, collider_key);
 
     // destroy from systems (chunk, tree)
-    chunk_mng_destroy(&collider_sys.collider_chunk, ptr->chunk_key);
+    chunk_mng_destroy(&collider_sys.collider_chunk, collider_ptr->chunk_key);
 
-    if (ptr->tree_node_idx != 0) {
-        collider_remv_from_tree(key);
+    if (collider_ptr->tree_node_idx != 0) {
+        collider_remv_from_tree(collider_key);
     }
 
-    pool_destroy(&collider_sys.collider_pool, key);
+    pool_destroy(&collider_sys.collider_pool, collider_key);
 
-    log_debug("destroyed collider [%u]", key);
+    log_debug("destroyed collider [%u]", collider_key);
 }
 
-collider *collider_get(u32 key) {
-    if (!pool_alive(&collider_sys.collider_pool, key)) {
-        log_err("collider_destroy: collider [%u] invalid (dead or worse) => stub", key);
+collider *collider_get(u32 collider_key) {
+    if (!pool_alive(&collider_sys.collider_pool, collider_key)) {
+        log_err("collider_destroy: collider [%u] invalid (dead or worse) => stub", collider_key);
         return &collider_sys.collider_pool.data_list_ptr[0];
     }
 
-    return pool_get(&collider_sys.collider_pool, key);
+    return pool_get(&collider_sys.collider_pool, collider_key);
 }
 
-bool collider_alive(u32 key) {
-    return pool_alive(&collider_sys.collider_pool, key);
+bool collider_alive(u32 collider_key) {
+    return pool_alive(&collider_sys.collider_pool, collider_key);
 }
 
 // ================================================================================================
 
 void collider_sys_update() {
     u32 iter_idx = 0;
-    u32 key = 0;
-    collider *ptr = nullptr;
+    u32 collider_key = 0;
+    collider *collider_ptr = nullptr;
 
-    while (pool_iterate(&collider_sys.collider_pool, &iter_idx, &key, &ptr)) {
+    while (pool_iterate(&collider_sys.collider_pool, &iter_idx, &collider_key, &collider_ptr)) {
         // update chunk
         f32 center_pos[2];
-        chunk_cal_center_rect(ptr->rect, center_pos);
-        chunk_mng_update(&collider_sys.collider_chunk, key, center_pos);
+        chunk_cal_center_rect(collider_ptr->rect, center_pos);
+        chunk_mng_update(&collider_sys.collider_chunk, collider_key, center_pos);
 
         // re-insert tree if moved out of fat aabb bounds
-        if (ptr->tree_node_idx != 0) {
-            collider_tree_node *node = &collider_sys.tree_node_pool[ptr->tree_node_idx];
+        if (collider_ptr->tree_node_idx != 0) {
+            collider_tree_node *node = pool_simple_get(&collider_sys.tree_node_pool, collider_ptr->tree_node_idx);
 
-            if (!_collider_rect_contains(node->collider_rect, ptr->rect)) {
-                _collider_tree_remove(ptr->tree_node_idx, false);
-                _collider_tree_insert(key, false);
+            if (!_collider_rect_contains(node->collider_rect, collider_ptr->rect)) {
+                _collider_tree_remove(collider_ptr->tree_node_idx, false);
+                _collider_tree_insert(collider_key, false);
             }
         }
     }
@@ -233,98 +216,35 @@ void collider_sys_update() {
 
 // ================================================================================================
 
-void collider_add_to_tree(u32 key) {
-    if (!pool_alive(&collider_sys.collider_pool, key)) {
-        log_err("collider_add_to_tree: collider [%u] invalid (dead or worse)", key);
+void collider_add_to_tree(u32 collider_key) {
+    if (!pool_alive(&collider_sys.collider_pool, collider_key)) {
+        log_err("collider_add_to_tree: collider [%u] invalid (dead or worse)", collider_key);
         return;
     }
 
-    collider *col = pool_get(&collider_sys.collider_pool, key);
+    collider *col = pool_get(&collider_sys.collider_pool, collider_key);
     if (col->tree_node_idx != 0) {
-        log_warn("collider_add_to_tree: collider [%u] already in tree", key);
+        log_warn("collider_add_to_tree: collider [%u] already in tree", collider_key);
         return;
     }
 
-    col->tree_node_idx = _collider_tree_insert(key, true);
+    col->tree_node_idx = _collider_tree_insert(collider_key, true);
 }
 
-void collider_remv_from_tree(u32 key) {
-    if (!pool_alive(&collider_sys.collider_pool, key)) {
-        log_err("collider_add_to_tree: collider [%u] invalid (dead or worse)", key);
+void collider_remv_from_tree(u32 collider_key) {
+    if (!pool_alive(&collider_sys.collider_pool, collider_key)) {
+        log_err("collider_add_to_tree: collider [%u] invalid (dead or worse)", collider_key);
         return;
     }
 
-    collider *col = pool_get(&collider_sys.collider_pool, key);
+    collider *col = pool_get(&collider_sys.collider_pool, collider_key);
     if (col->tree_node_idx == 0) {
-        log_warn("collider_add_to_tree: collider [%u] already not in tree", key);
+        log_warn("collider_add_to_tree: collider [%u] already not in tree", collider_key);
         return;
     }
 
     _collider_tree_remove(col->tree_node_idx, true);
     col->tree_node_idx = 0;
-}
-
-// ================================================================================================
-
-u32 collider_node_create(u32 collider_key) {
-    assert(collider_sys.tree_node_pool_len < collider_sys.tree_node_pool_cap);
-
-    u32 node_idx = collider_sys.tree_node_pool_head_key;
-    collider_tree_node *col_node = &collider_sys.tree_node_pool[node_idx];
-
-    if (node_idx == collider_sys.tree_node_pool_max_key) {
-        collider_sys.tree_node_pool_max_key++;
-        collider_sys.tree_node_pool_head_key++;
-    } else {
-        collider_sys.tree_node_pool_head_key = col_node->pool_flag;
-    }
-
-    collider_sys.tree_node_pool_len++;
-
-    *col_node = collider_tree_node{};
-    col_node->pool_flag = COLLIDER_ALIVE_POOL_FLAG;
-    col_node->pool_idx = node_idx;
-
-    if (collider_key != 0) {
-        collider *col = collider_get(collider_key);
-        f32 offset = collider_sys.fat_aabb_offset;
-        col_node->collider_key = collider_key;
-        col_node->collider_rect[0] = col->rect[0] - offset;
-        col_node->collider_rect[1] = col->rect[1] - offset;
-        col_node->collider_rect[2] = col->rect[2] + 2.0f * offset;
-        col_node->collider_rect[3] = col->rect[3] + 2.0f * offset;
-        col_node->collider_tag = col->tag;
-    }
-
-    return node_idx;
-}
-
-void collider_node_destroy(u32 idx) {
-    collider_tree_node *col_node = &collider_sys.tree_node_pool[idx];
-    assert(col_node->pool_flag == COLLIDER_ALIVE_POOL_FLAG);
-
-    col_node->pool_flag = collider_sys.tree_node_pool_head_key;
-    collider_sys.tree_node_pool_head_key = idx;
-    collider_sys.tree_node_pool_len--;
-}
-
-void collider_node_update(u32 collider_key) {
-    assert(collider_key != 0 && collider_key < collider_sys.collider_pool.slot_pool_len);
-
-    collider *col = collider_get(collider_key);
-    collider_tree_node *col_node = &collider_sys.tree_node_pool[col->tree_node_idx];
-    f32 offset = collider_sys.fat_aabb_offset;
-
-    col_node->collider_key = collider_key;
-    col_node->collider_rect[0] = col->rect[0] - offset;
-    col_node->collider_rect[1] = col->rect[1] - offset;
-    col_node->collider_rect[2] = col->rect[2] + 2.0f * offset;
-    col_node->collider_rect[3] = col->rect[3] + 2.0f * offset;
-    col_node->collider_tag = col->tag;
-    col_node->child[0] = 0;
-    col_node->child[1] = 0;
-    col_node->parent = 0;
-    col_node->height = 0;
 }
 
 // ================================================================================================
@@ -337,14 +257,29 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
     // - walk up, update, rebalance
 
     u32 insert_idx = 0;
+    collider_tree_node *insert_node = nullptr;
+
     if (is_create_new_node) {
-        insert_idx = collider_node_create(collider_key);
+        pool_simple_create(&collider_sys.tree_node_pool, &insert_idx, &insert_node);
     } else {
         assert(collider_alive(collider_key));
         collider *col = collider_get(collider_key);
         insert_idx = col->tree_node_idx;
-        collider_node_update(collider_key);
+        insert_node = pool_simple_get(&collider_sys.tree_node_pool, insert_idx);
+        insert_node->child[0] = 0;
+        insert_node->child[1] = 0;
+        insert_node->parent = 0;
+        insert_node->height = 0;
     }
+
+    collider *col = collider_get(collider_key);
+    f32 offset = collider_sys.fat_aabb_offset;
+    insert_node->collider_key = collider_key;
+    insert_node->collider_rect[0] = col->rect[0] - offset;
+    insert_node->collider_rect[1] = col->rect[1] - offset;
+    insert_node->collider_rect[2] = col->rect[2] + 2.0f * offset;
+    insert_node->collider_rect[3] = col->rect[3] + 2.0f * offset;
+    insert_node->collider_tag = col->tag;
 
     // empty tree => inserted leaf becomes root
     if (collider_sys.tree_root_node_idx == 0) {
@@ -353,10 +288,10 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
     }
 
     f32 leaf_rect[4] = {
-        collider_sys.tree_node_pool[insert_idx].collider_rect[0],
-        collider_sys.tree_node_pool[insert_idx].collider_rect[1],
-        collider_sys.tree_node_pool[insert_idx].collider_rect[2],
-        collider_sys.tree_node_pool[insert_idx].collider_rect[3]
+        insert_node->collider_rect[0],
+        insert_node->collider_rect[1],
+        insert_node->collider_rect[2],
+        insert_node->collider_rect[3]
     };
 
     // find best sibling down the tree use SAH
@@ -365,11 +300,11 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
     // - inherit_cost: cost from all cur_node's desendants
     u32 cur_idx = collider_sys.tree_root_node_idx;
     while (!_collider_node_is_leaf(cur_idx)) {
-        collider_tree_node *cur_node = &collider_sys.tree_node_pool[cur_idx];
+        collider_tree_node *cur_node = pool_simple_get(&collider_sys.tree_node_pool, cur_idx);
         u32 child0_idx = cur_node->child[0];
         u32 child1_idx = cur_node->child[1];
-        collider_tree_node *child0 = &collider_sys.tree_node_pool[child0_idx];
-        collider_tree_node *child1 = &collider_sys.tree_node_pool[child1_idx];
+        collider_tree_node *child0 = pool_simple_get(&collider_sys.tree_node_pool, child0_idx);
+        collider_tree_node *child1 = pool_simple_get(&collider_sys.tree_node_pool, child1_idx);
 
         f32 area = _collider_rect_perimeter(cur_node->collider_rect);
         f32 combined[4];
@@ -417,25 +352,27 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
     }
 
     u32 sibling_idx = cur_idx;
+    collider_tree_node *sibling_node = pool_simple_get(&collider_sys.tree_node_pool, sibling_idx);
 
     // common parent of sibling & inserted leaf
-    u32 old_parent_idx = collider_sys.tree_node_pool[sibling_idx].parent;
-    u32 new_parent_idx = collider_node_create(0);
+    u32 old_parent_idx = sibling_node->parent;
+    u32 new_parent_idx = 0;
+    collider_tree_node *new_parent = nullptr;
+    pool_simple_create(&collider_sys.tree_node_pool, &new_parent_idx, &new_parent);
 
     // new_parent will be between old_parent and 2 childs
-    collider_tree_node *new_parent = &collider_sys.tree_node_pool[new_parent_idx];
     new_parent->parent = old_parent_idx;
-    _collider_rect_union(leaf_rect, collider_sys.tree_node_pool[sibling_idx].collider_rect, new_parent->collider_rect);
-    new_parent->height = collider_sys.tree_node_pool[sibling_idx].height + 1;
+    _collider_rect_union(leaf_rect, sibling_node->collider_rect, new_parent->collider_rect);
+    new_parent->height = sibling_node->height + 1;
     new_parent->child[0] = sibling_idx;
     new_parent->child[1] = insert_idx;
 
-    collider_sys.tree_node_pool[sibling_idx].parent = new_parent_idx;
-    collider_sys.tree_node_pool[insert_idx].parent = new_parent_idx;
+    sibling_node->parent = new_parent_idx;
+    pool_simple_get(&collider_sys.tree_node_pool, insert_idx)->parent = new_parent_idx;
 
     // link new parent
     if (old_parent_idx != 0) {
-        collider_tree_node *old_parent = &collider_sys.tree_node_pool[old_parent_idx];
+        collider_tree_node *old_parent = pool_simple_get(&collider_sys.tree_node_pool, old_parent_idx);
         if (old_parent->child[0] == sibling_idx) {
             old_parent->child[0] = new_parent_idx;
         } else {
@@ -450,9 +387,9 @@ u32 _collider_tree_insert(u32 collider_key, bool is_create_new_node) {
     while (walk_idx != 0) {
         walk_idx = _collider_tree_balance(walk_idx);
 
-        collider_tree_node *p = &collider_sys.tree_node_pool[walk_idx];
-        collider_tree_node *c0 = &collider_sys.tree_node_pool[p->child[0]];
-        collider_tree_node *c1 = &collider_sys.tree_node_pool[p->child[1]];
+        collider_tree_node *p = pool_simple_get(&collider_sys.tree_node_pool, walk_idx);
+        collider_tree_node *c0 = pool_simple_get(&collider_sys.tree_node_pool, p->child[0]);
+        collider_tree_node *c1 = pool_simple_get(&collider_sys.tree_node_pool, p->child[1]);
 
         p->height = 1 + ((c0->height > c1->height) ? c0->height : c1->height);
         _collider_rect_union(c0->collider_rect, c1->collider_rect, p->collider_rect);
@@ -476,23 +413,23 @@ void _collider_tree_remove(u32 node_idx, bool is_destroy_node) {
     // removing root leaf => tree empty
     if (node_idx == collider_sys.tree_root_node_idx) {
         if (is_destroy_node) {
-            collider_node_destroy(node_idx);
+            pool_simple_destroy(&collider_sys.tree_node_pool, node_idx);
         }
         collider_sys.tree_root_node_idx = 0;
         return;
     }
 
-    collider_tree_node *remv_node = &collider_sys.tree_node_pool[node_idx];
+    collider_tree_node *remv_node = pool_simple_get(&collider_sys.tree_node_pool, node_idx);
     u32 par_idx = remv_node->parent;
-    collider_tree_node *par_node = &collider_sys.tree_node_pool[par_idx];
+    collider_tree_node *par_node = pool_simple_get(&collider_sys.tree_node_pool, par_idx);
     u32 grandpar_idx = par_node->parent;
 
     u32 sibling_idx = (par_node->child[0] == node_idx) ? par_node->child[1] : par_node->child[0];
-    collider_tree_node *sibling_node = &collider_sys.tree_node_pool[sibling_idx];
+    collider_tree_node *sibling_node = pool_simple_get(&collider_sys.tree_node_pool, sibling_idx);
 
     if (grandpar_idx != 0) {
         // connect sibling to grandparent
-        collider_tree_node *grandpar_node = &collider_sys.tree_node_pool[grandpar_idx];
+        collider_tree_node *grandpar_node = pool_simple_get(&collider_sys.tree_node_pool, grandpar_idx);
         if (grandpar_node->child[0] == par_idx) {
             grandpar_node->child[0] = sibling_idx;
         } else {
@@ -501,18 +438,18 @@ void _collider_tree_remove(u32 node_idx, bool is_destroy_node) {
         sibling_node->parent = grandpar_idx;
 
         if (is_destroy_node) {
-            collider_node_destroy(node_idx);
+            pool_simple_destroy(&collider_sys.tree_node_pool, node_idx);
         }
-        collider_node_destroy(par_idx);
+        pool_simple_destroy(&collider_sys.tree_node_pool, par_idx);
 
         // walkup from grandparent
         u32 walk_idx = grandpar_idx;
         while (walk_idx != 0) {
             walk_idx = _collider_tree_balance(walk_idx);
 
-            collider_tree_node *p = &collider_sys.tree_node_pool[walk_idx];
-            collider_tree_node *c0 = &collider_sys.tree_node_pool[p->child[0]];
-            collider_tree_node *c1 = &collider_sys.tree_node_pool[p->child[1]];
+            collider_tree_node *p = pool_simple_get(&collider_sys.tree_node_pool, walk_idx);
+            collider_tree_node *c0 = pool_simple_get(&collider_sys.tree_node_pool, p->child[0]);
+            collider_tree_node *c1 = pool_simple_get(&collider_sys.tree_node_pool, p->child[1]);
 
             _collider_rect_union(c0->collider_rect, c1->collider_rect, p->collider_rect);
             p->height = 1 + ((c0->height > c1->height) ? c0->height : c1->height);
@@ -526,9 +463,9 @@ void _collider_tree_remove(u32 node_idx, bool is_destroy_node) {
         sibling_node->parent = 0;
 
         if (is_destroy_node) {
-            collider_node_destroy(node_idx);
+            pool_simple_destroy(&collider_sys.tree_node_pool, node_idx);
         }
-        collider_node_destroy(par_idx);
+        pool_simple_destroy(&collider_sys.tree_node_pool, par_idx);
     }
 }
 
@@ -565,7 +502,7 @@ bool _collider_rect_overlaps(f32 a[4], f32 b[4]) {
 }
 
 bool _collider_node_is_leaf(u32 idx) {
-    return collider_sys.tree_node_pool[idx].child[0] == 0;
+    return pool_simple_get(&collider_sys.tree_node_pool, idx)->child[0] == 0;
 }
 
 void _collider_tree_process_pairs(u32 idxA, u32 idxB, void (*fn_process)(collider*, collider*)) {
@@ -576,8 +513,8 @@ void _collider_tree_process_pairs(u32 idxA, u32 idxB, void (*fn_process)(collide
 
     if (idxA == 0 || idxB == 0) return;
 
-    collider_tree_node *nodeA = &collider_sys.tree_node_pool[idxA];
-    collider_tree_node *nodeB = &collider_sys.tree_node_pool[idxB];
+    collider_tree_node *nodeA = pool_simple_get(&collider_sys.tree_node_pool, idxA);
+    collider_tree_node *nodeB = pool_simple_get(&collider_sys.tree_node_pool, idxB);
 
     // early prune
     if (!_collider_rect_overlaps(nodeA->collider_rect, nodeB->collider_rect)) return;
@@ -629,31 +566,31 @@ u32 _collider_tree_balance(u32 iA) {
     // AVL-like tree rotations
     // node A has children B and C (B => left, C => right)
     // balance = height(C) - height(B):
-    //   > 1  => right heavy, rotate C up
-    //   < -1 => left heavy, rotate B up
-    collider_tree_node *A = &collider_sys.tree_node_pool[iA];
+    //    > 1  => right heavy, rotate C up
+    //    < -1 => left heavy, rotate B up
+    collider_tree_node *A = pool_simple_get(&collider_sys.tree_node_pool, iA);
     if (_collider_node_is_leaf(iA) || A->height < 2) {
         return iA;
     }
 
     u32 iB = A->child[0];
     u32 iC = A->child[1];
-    collider_tree_node *B = &collider_sys.tree_node_pool[iB];
-    collider_tree_node *C = &collider_sys.tree_node_pool[iC];
+    collider_tree_node *B = pool_simple_get(&collider_sys.tree_node_pool, iB);
+    collider_tree_node *C = pool_simple_get(&collider_sys.tree_node_pool, iC);
 
     i32 balance = C->height - B->height;
 
     // right heavy: rotate C up to replace A
-    //   A                  C
-    //  / \                / \
-    // B   C     ==>      A   G (or F)
-    //    / \            / \
-    //   F   G          B   F (or G)
+    //    A                   C
+    //   / \                 / \
+    //  B   C      ==>      A   G (or F)
+    //     / \             / \
+    //    F   G           B   F (or G)
     if (balance > 1) {
         u32 iF = C->child[0];
         u32 iG = C->child[1];
-        collider_tree_node *F = &collider_sys.tree_node_pool[iF];
-        collider_tree_node *G = &collider_sys.tree_node_pool[iG];
+        collider_tree_node *F = pool_simple_get(&collider_sys.tree_node_pool, iF);
+        collider_tree_node *G = pool_simple_get(&collider_sys.tree_node_pool, iG);
 
         // swap A, C
         C->child[0] = iA;
@@ -662,7 +599,7 @@ u32 _collider_tree_balance(u32 iA) {
 
         // update grandparent
         if (C->parent != 0) {
-            collider_tree_node *p = &collider_sys.tree_node_pool[C->parent];
+            collider_tree_node *p = pool_simple_get(&collider_sys.tree_node_pool, C->parent);
             if (p->child[0] == iA) {
                 p->child[0] = iC;
             } else {
@@ -698,16 +635,16 @@ u32 _collider_tree_balance(u32 iA) {
     }
 
     // left heavy: rotate B up to replace A
-    //     A                B
-    //    / \              / \
-    //   B   C   ==>      D   A (or E)
-    //  / \                  / \
-    // D   E                E   C (or D)
+    //      A                B
+    //     / \              / \
+    //    B   C    ==>     D   A (or E)
+    //   / \                  / \
+    //  D   E                E   C (or D)
     if (balance < -1) {
         u32 iD = B->child[0];
         u32 iE = B->child[1];
-        collider_tree_node *D = &collider_sys.tree_node_pool[iD];
-        collider_tree_node *E = &collider_sys.tree_node_pool[iE];
+        collider_tree_node *D = pool_simple_get(&collider_sys.tree_node_pool, iD);
+        collider_tree_node *E = pool_simple_get(&collider_sys.tree_node_pool, iE);
 
         // swap A, B
         B->child[0] = iA;
@@ -716,7 +653,7 @@ u32 _collider_tree_balance(u32 iA) {
 
         // update grandparent
         if (B->parent != 0) {
-            collider_tree_node *p = &collider_sys.tree_node_pool[B->parent];
+            collider_tree_node *p = pool_simple_get(&collider_sys.tree_node_pool, B->parent);
             if (p->child[0] == iA) {
                 p->child[0] = iB;
             } else {
@@ -758,21 +695,21 @@ u32 _collider_tree_balance(u32 iA) {
 
 void _collider_debug_draw() {
     if (collider_sys.tree_root_node_idx != 0) {
-        _collider_debug_draw_node_recursive(&collider_sys.tree_node_pool[collider_sys.tree_root_node_idx]);
+        _collider_debug_draw_node_recursive(pool_simple_get(&collider_sys.tree_node_pool, collider_sys.tree_root_node_idx));
     }
 
     u32 iter_idx = 0;
-    u32 key = 0;
-    collider *ptr = nullptr;
+    u32 collider_key = 0;
+    collider *collider_ptr = nullptr;
 
-    while (pool_iterate(&collider_sys.collider_pool, &iter_idx, &key, &ptr)) {
+    while (pool_iterate(&collider_sys.collider_pool, &iter_idx, &collider_key, &collider_ptr)) {
         draw_call *drw = draw_call_make();
         if (drw) {
             drw->type = draw_type::RECTANGLE;
-            drw->rectangle.rect[0] = ptr->rect[0];
-            drw->rectangle.rect[1] = ptr->rect[1];
-            drw->rectangle.rect[2] = ptr->rect[2];
-            drw->rectangle.rect[3] = ptr->rect[3];
+            drw->rectangle.rect[0] = collider_ptr->rect[0];
+            drw->rectangle.rect[1] = collider_ptr->rect[1];
+            drw->rectangle.rect[2] = collider_ptr->rect[2];
+            drw->rectangle.rect[3] = collider_ptr->rect[3];
             drw->rectangle.thickness = 1.0f;
             drw->rectangle.color[0] = 0;
             drw->rectangle.color[1] = 255;
@@ -798,10 +735,10 @@ void _collider_debug_draw_node_recursive(collider_tree_node *node) {
     }
 
     if (node->child[0] != 0) {
-        _collider_debug_draw_node_recursive(&collider_sys.tree_node_pool[node->child[0]]);
+        _collider_debug_draw_node_recursive(pool_simple_get(&collider_sys.tree_node_pool, node->child[0]));
     }
     if (node->child[1] != 0) {
-        _collider_debug_draw_node_recursive(&collider_sys.tree_node_pool[node->child[1]]);
+        _collider_debug_draw_node_recursive(pool_simple_get(&collider_sys.tree_node_pool, node->child[1]));
     }
 }
 

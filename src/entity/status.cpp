@@ -5,23 +5,19 @@
 module;
 
 #include <cassert>
-#include <cstring>
+#include <cstddef>
 
 export module entity:status;
 
 import def;
 import mem;
 import log;
-
 import context;
+import pool_simple;
 
 export namespace sw {
 
-constexpr u32 STATUS_ALIVE_POOL_FLAG = (u32)-1;
-
-// status_pool will be a classic pool instead of sparse-set pool since this is not for iteration
 struct status {
-    u32 pool_flag;
     u32 pool_key;
 
     //
@@ -39,103 +35,45 @@ struct status {
 };
 
 struct {
-    status *status_pool;
-    u32 status_pool_cap;
-    u32 status_pool_head_key;
-    u32 status_pool_max_key;
-    u32 status_pool_len;
+    pool_simple<status> pool;
 } status_sys = {};
 
 // ================================================================================================
 
 void status_sys_init(u32 cap) {
-    status_sys.status_pool = (status*)arena_alloc(&omni_arena, cap * sizeof(status));
-    status_sys.status_pool_cap = cap;
-
-    // stub
-    status_sys.status_pool_head_key = 1;
-    status_sys.status_pool_max_key = 1;
-    status_sys.status_pool_len = 1;
+    pool_simple_init(&status_sys.pool, cap, offsetof(status, pool_key));
 }
 
 // ================================================================================================
 
-void status_create(u32 flag, u32 *out_key, status **out_ptr) {
+void status_create(u32 flag, u32 *out_status_key, status **out_status_ptr) {
     // the out_ptr is supposed to modified afterward, so this just return the bare minimum
 
-    if (status_sys.status_pool_len >= status_sys.status_pool_cap) {
-        log_err("status_create: too many statuses (%u) => stub", status_sys.status_pool_len);
-        if (out_key) { *out_key = 0; }
-        if (out_ptr) { *out_ptr = &status_sys.status_pool[0]; }
-        return;
+    u32 status_key = 0;
+    status *status_ptr = nullptr;
+    pool_simple_create(&status_sys.pool, &status_key, &status_ptr);
+
+    if (status_key != 0) {
+        status_ptr->flag = flag;
+        log_trace("created status [%u]: type = %u", status_key, flag);
     }
 
-    // get free index from free-list head
-    u32 key = status_sys.status_pool_head_key;
-    assert(key <= status_sys.status_pool_max_key);
-
-    // update free-list
-    if (key == status_sys.status_pool_max_key) {
-        status_sys.status_pool_max_key++;
-        status_sys.status_pool_head_key++;
-    } else {
-        status_sys.status_pool_head_key = status_sys.status_pool[key].pool_flag;
-    }
-
-    status_sys.status_pool_len++;
-
-    // init status
-    status *ptr = &status_sys.status_pool[key];
-
-    memset(ptr, 0, sizeof(status));
-    status_sys.status_pool[key].pool_flag = STATUS_ALIVE_POOL_FLAG;
-    ptr->pool_key = key;
-    ptr->flag = flag;
-
-    log_trace("created status [%u]: type = %u", key, flag);
-
-    if (out_key) { *out_key = key; }
-    if (out_ptr) { *out_ptr = ptr; }
+    if (out_status_key) { *out_status_key = status_key; }
+    if (out_status_ptr) { *out_status_ptr = status_ptr; }
 }
 
-void status_destroy(u32 key) {
-    if (key == 0 || key >= status_sys.status_pool_max_key) {
-        log_warn("status_destroy: status [%u] invalid", key);
-        return;
+void status_destroy(u32 status_key) {
+    if (pool_simple_destroy(&status_sys.pool, status_key)) {
+        log_trace("destroyed status [%u]", status_key);
     }
-
-    if (status_sys.status_pool[key].pool_flag != STATUS_ALIVE_POOL_FLAG) {
-        log_warn("status_destroy: status [%u] already dead", key);
-        return;
-    }
-
-    // push slot back to free-list head
-    status_sys.status_pool[key].pool_flag = status_sys.status_pool_head_key;
-    status_sys.status_pool_head_key = key;
-    status_sys.status_pool_len--;
-
-    log_trace("destroyed status [%u]", key);
 }
 
-status *status_get(u32 key) {
-    if (key == 0 || key >= status_sys.status_pool_max_key) {
-        log_err("status_get: status [%u] invalid => stub", key);
-        return &status_sys.status_pool[0];
-    }
-
-    if (status_sys.status_pool[key].pool_flag != STATUS_ALIVE_POOL_FLAG) {
-        log_err("status_get: status [%u] is dead => stub", key);
-        return &status_sys.status_pool[0];
-    }
-
-    return &status_sys.status_pool[key];
+status *status_get(u32 status_key) {
+    return pool_simple_get(&status_sys.pool, status_key);
 }
 
-bool status_alive(u32 key) {
-    if (key == 0 || key >= status_sys.status_pool_max_key) {
-        return false;
-    }
-    return status_sys.status_pool[key].pool_flag == STATUS_ALIVE_POOL_FLAG;
+bool status_alive(u32 status_key) {
+    return pool_simple_alive(&status_sys.pool, status_key);
 }
 
 }

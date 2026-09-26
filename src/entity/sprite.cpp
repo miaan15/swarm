@@ -5,6 +5,7 @@
 module;
 
 #include <cmath>
+#include <cstddef>
 
 export module entity:sprite;
 
@@ -76,8 +77,7 @@ void sprite_sys_init(u32 profile_cap, u32 sprite_cap) {
     sprite_sys.profile_list_ptr[0] = sprite_profile{ 0, { 0, 0, 32, 32 } };
 
     // sprite
-    constexpr usize SPRITE_KEY_FIELD_OFFSET = 0;
-    pool_init(&sprite_sys.sprite_pool, sprite_cap, SPRITE_KEY_FIELD_OFFSET);
+    pool_init(&sprite_sys.sprite_pool, sprite_cap, offsetof(sprite, pool_key));
     chunk_mng_init(&sprite_sys.sprite_chunk_mng, 1024, sprite_cap);
 }
 
@@ -112,13 +112,13 @@ sprite_profile sprite_profile_get(u32 profile_idx) {
 
 // ================================================================================================
 
-void sprite_create(u32 profile_idx, f32 dest_rect[4], u64 sorting, u32 *out_key, sprite **out_ptr) {
+void sprite_create(u32 profile_idx, f32 dest_rect[4], u64 sorting, u32 *out_sprite_key, sprite **out_sprite_ptr) {
     // create sprite from profile, update chunk
 
     if (sprite_sys.sprite_pool.data_list_len >= sprite_sys.sprite_pool.cap) {
         log_err("sprite_create: too many sprite (%u) => stub", sprite_sys.sprite_pool.data_list_len);
-        if (out_key) { *out_key = 0; }
-        if (out_ptr) { *out_ptr = &sprite_sys.sprite_pool.data_list_ptr[0]; }
+        if (out_sprite_key) { *out_sprite_key = 0; }
+        if (out_sprite_ptr) { *out_sprite_ptr = &sprite_sys.sprite_pool.data_list_ptr[0]; }
         return;
     }
 
@@ -171,8 +171,8 @@ void sprite_create(u32 profile_idx, f32 dest_rect[4], u64 sorting, u32 *out_key,
               sprite_key, profile_idx, sprite_ptr->dest_rect[0], sprite_ptr->dest_rect[1],
               sprite_ptr->dest_rect[2], sprite_ptr->dest_rect[3], (unsigned long long)sorting);
 
-    if (out_key) { *out_key = sprite_key; }
-    if (out_ptr) { *out_ptr = sprite_ptr; }
+    if (out_sprite_key) { *out_sprite_key = sprite_key; }
+    if (out_sprite_ptr) { *out_sprite_ptr = sprite_ptr; }
 }
 
 void sprite_destroy(u32 sprite_key) {

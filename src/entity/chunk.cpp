@@ -6,6 +6,7 @@ module;
 
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -69,8 +70,7 @@ bool _chunk_map_open(chunk_mng *mng, i32 pos[2], u32 *out_idx, chunk_slot **out_
 void chunk_mng_init(chunk_mng *mng, f32 chunk_size, u32 cap) {
     mng->chunk_size = chunk_size;
 
-    constexpr usize CHUNK_POINT_KEY_FIELD_OFFSET = 0;
-    pool_init(&mng->point_pool, cap, CHUNK_POINT_KEY_FIELD_OFFSET);
+    pool_init(&mng->point_pool, cap, offsetof(chunk_point, pool_key));
     mng->chunk_slot_map = (chunk_slot*)arena_alloc(&omni_arena, cap * sizeof(chunk_slot));
     mng->slot_map_cap = cap;
 
@@ -80,13 +80,13 @@ void chunk_mng_init(chunk_mng *mng, f32 chunk_size, u32 cap) {
 
 // ================================================================================================
 
-void chunk_mng_create(chunk_mng *mng, u32 data, f32 center_pos[2], u32 *out_key, chunk_point **out_ptr) {
+void chunk_mng_create(chunk_mng *mng, u32 data, f32 point_pos[2], u32 *out_chunk_key, chunk_point **out_chunk_ptr) {
     // allocate new point instance and insert into matching chunk slot linked-list
 
     if (mng->slot_map_len >= mng->slot_map_cap) {
         log_err("chunk_mng_create: too many chunk points (%u) => stub", mng->slot_map_len);
-        if (out_key) { *out_key = 0; }
-        if (out_ptr) { *out_ptr = &mng->point_pool.data_list_ptr[0]; }
+        if (out_chunk_key) { *out_chunk_key = 0; }
+        if (out_chunk_ptr) { *out_chunk_ptr = &mng->point_pool.data_list_ptr[0]; }
         return;
     }
 
@@ -97,10 +97,10 @@ void chunk_mng_create(chunk_mng *mng, u32 data, f32 center_pos[2], u32 *out_key,
 
     point_ptr->data = data;
     point_ptr->pool_key = point_key;
-    point_ptr->pos[0] = center_pos[0];
-    point_ptr->pos[1] = center_pos[1];
+    point_ptr->pos[0] = point_pos[0];
+    point_ptr->pos[1] = point_pos[1];
 
-    _chunk_pos_cal(mng, center_pos, point_ptr->chunk_pos);
+    _chunk_pos_cal(mng, point_pos, point_ptr->chunk_pos);
 
     // open slot in chunk hash map
     u32 slot_idx = 0;
@@ -121,8 +121,8 @@ void chunk_mng_create(chunk_mng *mng, u32 data, f32 center_pos[2], u32 *out_key,
     slot_ptr->point_list_begin = point_key;
     slot_ptr->point_list_len++;
 
-    if (out_key) { *out_key = point_key; }
-    if (out_ptr) { *out_ptr = point_ptr; }
+    if (out_chunk_key) { *out_chunk_key = point_key; }
+    if (out_chunk_ptr) { *out_chunk_ptr = point_ptr; }
 }
 
 void chunk_mng_destroy(chunk_mng *mng, u32 point_key) {
@@ -165,7 +165,7 @@ void chunk_mng_destroy(chunk_mng *mng, u32 point_key) {
     pool_destroy(&mng->point_pool, point_key);
 }
 
-void chunk_mng_update(chunk_mng *mng, u32 point_key, f32 new_center_pos[2]) {
+void chunk_mng_update(chunk_mng *mng, u32 point_key, f32 new_point_pos[2]) {
     // update point world pos to update its chunk pos, chunk slot,...
 
     if (!pool_alive(&mng->point_pool, point_key)) {
@@ -176,12 +176,12 @@ void chunk_mng_update(chunk_mng *mng, u32 point_key, f32 new_center_pos[2]) {
     chunk_point *point_ptr = pool_get(&mng->point_pool, point_key);
 
     i32 new_chunk_pos[2];
-    _chunk_pos_cal(mng, new_center_pos, new_chunk_pos);
+    _chunk_pos_cal(mng, new_point_pos, new_chunk_pos);
 
     // point stayed inside the exact same chunk, then no change
     if (point_ptr->chunk_pos[0] == new_chunk_pos[0] && point_ptr->chunk_pos[1] == new_chunk_pos[1]) {
-        point_ptr->pos[0] = new_center_pos[0];
-        point_ptr->pos[1] = new_center_pos[1];
+        point_ptr->pos[0] = new_point_pos[0];
+        point_ptr->pos[1] = new_point_pos[1];
         return;
     }
 
@@ -212,8 +212,8 @@ void chunk_mng_update(chunk_mng *mng, u32 point_key, f32 new_center_pos[2]) {
     }
 
     // clean to re-insert
-    point_ptr->pos[0] = new_center_pos[0];
-    point_ptr->pos[1] = new_center_pos[1];
+    point_ptr->pos[0] = new_point_pos[0];
+    point_ptr->pos[1] = new_point_pos[1];
     point_ptr->chunk_pos[0] = new_chunk_pos[0];
     point_ptr->chunk_pos[1] = new_chunk_pos[1];
 
@@ -306,14 +306,14 @@ void chunk_mng_query(chunk_mng *mng, f32 rect[4], u32 **out_list, u32 *out_list_
 // ================================================================================================
 
 bool _chunk_mng_validate(chunk_mng *mng) {
-    u32 total_active_instances = 0;
+    u32 total_active_points = 0;
     u32 iter_idx = 0;
     u32 point_key = 0;
     chunk_point *point_ptr = nullptr;
 
     // validate all active points and bidirectional list links
     while (pool_iterate(&mng->point_pool, &iter_idx, &point_key, &point_ptr)) {
-        total_active_instances++;
+        total_active_points++;
 
         i32 expected_chunk_pos[2];
         _chunk_pos_cal(mng, point_ptr->pos, expected_chunk_pos);
@@ -428,9 +428,9 @@ bool _chunk_mng_validate(chunk_mng *mng) {
 
     free(visited_slots);
 
-    if (total_chunk_instances != total_active_instances) {
+    if (total_chunk_instances != total_active_points) {
         log_trace("chunk_mng validate: instances across chunks (%u) != pool active count (%u)",
-                  total_chunk_instances, total_active_instances);
+                  total_chunk_instances, total_active_points);
         return false;
     }
 
@@ -468,7 +468,7 @@ void _chunk_mng_debug_log(chunk_mng *mng) {
 
             chunk_point *point_ptr = pool_get(&mng->point_pool, current_point_key);
             string_offset += snprintf(debug_buf + string_offset, buffer_size - string_offset,
-                                      "- instance [%u]: data = [%u]; center = (%.1f, %.1f) in chunk [%d %d]\n",
+                                      "- point [%u]: data = [%u]; pos = (%.1f, %.1f) in chunk [%d %d]\n",
                                       current_point_key, point_ptr->data, point_ptr->pos[0], point_ptr->pos[1], point_ptr->chunk_pos[0], point_ptr->chunk_pos[1]);
 
             current_point_key = point_ptr->links_in_slot[1];
@@ -481,10 +481,10 @@ void _chunk_mng_debug_log(chunk_mng *mng) {
 
 // ================================================================================================
 
-f32* chunk_cal_center_rect(f32 rect[4], f32 out_center_pos[2]) {
-    out_center_pos[0] = rect[0] + rect[2] / 2.0f;
-    out_center_pos[1] = rect[1] + rect[3] / 2.0f;
-    return out_center_pos;
+f32* chunk_cal_center_rect(f32 rect[4], f32 out_point_pos[2]) {
+    out_point_pos[0] = rect[0] + rect[2] / 2.0f;
+    out_point_pos[1] = rect[1] + rect[3] / 2.0f;
+    return out_point_pos;
 }
 
 // ================================================================================================

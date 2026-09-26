@@ -19,7 +19,7 @@ import log;
 
 export namespace sw {
 
-constexpr usize _KEY_FIELD_OF_T_OFFS_DISABLE_VALUE = (usize)-1;
+constexpr usize _POOL_KEY_FIELD_OF_T_OFFS_DISABLE_VALUE = (usize)-1;
 
 template <typename T>
 struct pool {
@@ -46,7 +46,7 @@ struct pool {
  * @param key_field_of_T_offs byte offset of u32 key inside struct T so pool can automatically set its value (leave default if not has that)
  */
 template <typename T>
-void pool_init(pool<T> *p, u32 cap, usize key_field_of_T_offs = _KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
+void pool_init(pool<T> *p, u32 cap, usize key_field_of_T_offs = _POOL_KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
     p->key_field_of_T_offs = key_field_of_T_offs;
 
     p->slot_pool_ptr = (i32*)arena_alloc(&omni_arena, cap * sizeof(i32));
@@ -102,7 +102,7 @@ void pool_create(pool<T> *p, u32 *out_key, T **out_ptr) {
     memset(ptr, 0, sizeof(T));
 
     // update "key" field of T if existed
-    if (p->key_field_of_T_offs != _KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
+    if (p->key_field_of_T_offs != _POOL_KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
         memcpy((char*)ptr + p->key_field_of_T_offs, &key, sizeof(u32));
     }
 
@@ -220,7 +220,7 @@ bool pool_iterate(pool<T> *p, u32 *iter_idx, u32 *out_key, T **out_ptr) {
 
         if (out_ptr) { *out_ptr = ptr; }
         if (out_key) {
-            if (p->key_field_of_T_offs != _KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
+            if (p->key_field_of_T_offs != _POOL_KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
                 memcpy(out_key, (char*)ptr + p->key_field_of_T_offs, sizeof(u32));
             }
         }

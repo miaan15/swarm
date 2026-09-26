@@ -16,7 +16,7 @@ export namespace sw {
 struct action {
     u32 from;
     u32 to;
-    u32 type;
+    u32 tag;
     u32 data[3];
 };
 
@@ -33,19 +33,19 @@ void action_sys_init(u32 cap) {
     action_sys.buffer_len = 0;
 }
 
-void action_make(u32 from, u32 to, u32 type, const u32 data[3]) {
+void action_make(u32 from, u32 to, u32 tag, const u32 data[3]) {
     if (action_sys.buffer_len >= action_sys.buffer_cap) {
         log_err("action_make: too much actions (%u)", action_sys.buffer_len);
         return;
     }
 
     action_sys.buffer_ptr[action_sys.buffer_len] = action{
-        from, to, type,
+        from, to, tag,
         { data[0], data[1], data[2] }
     };
     action_sys.buffer_len++;
 
-    log_trace("make action: from [%u] to [%u]; type = [%u]; data = (%u %u %u)", from, to, type, data[0], data[1], data[2]);
+    log_trace("make action: from [%u] to [%u]; tag = [%u]; data = (%u %u %u)", from, to, tag, data[0], data[1], data[2]);
 }
 
 void action_sys_update() {
