@@ -62,6 +62,12 @@ void context_init() {
     snprintf(source_dir, sizeof(source_dir), "%s%s%s", project_dir, PATH_SEPARATOR, "src");
     snprintf(assets_dir, sizeof(assets_dir), "%s%s%s", project_dir, PATH_SEPARATOR, "assets");
 
+    // SDL
+    int _screen_width, _screen_height;
+    SDL_GetWindowSizeInPixels(window, &_screen_width, &_screen_height);
+    screen_width = _screen_width;
+    screen_height = _screen_height;
+
     // ARENA
     arena_init(&omni_arena, OMNI_ARENA_SIZE);
 

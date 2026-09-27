@@ -245,6 +245,14 @@ void camera_translate_world_to_screen_rect(f32 rect[4], camera cam) {
     rect[3] *= scale;
 }
 
+void camera_get_center(camera *cam, f32 out_center_pos[2]) {
+    assert(out_center_pos);
+    f32 width = cam->size;
+    f32 height = cam->size / screen_width * screen_height;
+    out_center_pos[0] = cam->pos[0] + width  / 2;
+    out_center_pos[1] = cam->pos[1] + height / 2;
+}
+
 void camera_resize(camera *cam, f32 pos[2], f32 new_size) {
     assert(cam);
 

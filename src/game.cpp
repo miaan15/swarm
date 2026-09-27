@@ -8,13 +8,14 @@ export module game;
 import def;
 import log;
 import context;
+import context_game;
 import draw;
 import entity;
 import input;
 
 export namespace sw {
 
-constexpr u32 NPC_COUNT = 200;
+constexpr u32 NPC_COUNT = 10'000;
 
 constexpr f32 NPC_MIN_X = -10000.0f;
 constexpr f32 NPC_MAX_X =  12800.0f;
@@ -112,13 +113,27 @@ void game_init() {
 
 void game_input() {}
 void game_update() {
-    // if (input_is_key_down_cache(SCANCODE::K)) { log_info("DOWN 0"); }
-    // if (input_is_key_up_cache(SCANCODE::K)) { log_info("UP 11"); }
-    // if (input_is_key_on_cache(SCANCODE::K)) { log_info("ON 222"); }
+
 }
 void game_update_late() {}
 
 void game_visual() {
+    f32 camera_move_input[2] = {0, 0};
+    f32 camera_zoom_input = 0;
+    if (input_is_key_on_cache(SCANCODE::D)) { camera_move_input[0] += 1; }
+    if (input_is_key_on_cache(SCANCODE::A)) { camera_move_input[0] -= 1; }
+    if (input_is_key_on_cache(SCANCODE::W)) { camera_move_input[1] -= 1; }
+    if (input_is_key_on_cache(SCANCODE::S)) { camera_move_input[1] += 1; }
+    if (input_is_key_on_cache(SCANCODE::E)) { camera_zoom_input -= 1; }
+    if (input_is_key_on_cache(SCANCODE::Q)) { camera_zoom_input += 1; }
+
+    constexpr f32 CAMERA_MOVE_SPEED = 500;
+    constexpr f32 CAMERA_ZOOM_SPEED = 500;
+    const f32 scale = main_camera.size / screen_width;
+    main_camera.pos[0] += camera_move_input[0] * CAMERA_MOVE_SPEED * scale * time_delta_sec;
+    main_camera.pos[1] += camera_move_input[1] * CAMERA_MOVE_SPEED * scale * time_delta_sec;
+    f32 camera_center[2]; camera_get_center(&main_camera, camera_center);
+    camera_resize(&main_camera, camera_center, main_camera.size + camera_zoom_input * CAMERA_ZOOM_SPEED * scale * time_delta_sec);
 }
 
 void game_draw() {

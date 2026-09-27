@@ -6,12 +6,14 @@ export module context_game;
 
 import draw;
 
+import context;
+
 export namespace sw {
 
 camera main_camera;
 
 void context_game_init() {
-    main_camera = DEFAULT_CAMERA;
+    main_camera = { {0, 0}, screen_width };
 }
 
 }

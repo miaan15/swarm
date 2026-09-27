@@ -19,7 +19,6 @@ import benchmark;
 using namespace sw;
 
 int main(int argc, char *argv[]) {
-    context_init();
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
@@ -32,6 +31,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    context_init();
     context_game_init();
 
     input_init();
