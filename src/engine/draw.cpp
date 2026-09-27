@@ -1,6 +1,6 @@
-// engine main way of drawing to screen, also include texture and stuff
+// way of drawing to screen, also include texture, sorting and stuff
 // - texture: load from whatever SDL_image support, in assets/ dir
-// - draw is immediate: draw need to call every frame
+// - draw is kind-of-immediate: draw need to call every frame but will automatically batched
 // - supposed to manually edit draw_call pointer after making it
 // - draw_call.sorting (u64) used to sort out for the final render
 

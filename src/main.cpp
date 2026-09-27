@@ -9,6 +9,7 @@ import context;
 import context_game;
 
 import draw;
+import input;
 import entity;
 
 import game;
@@ -33,6 +34,8 @@ int main(int argc, char *argv[]) {
 
     context_game_init();
 
+    input_init();
+
     game_init();
 
     // benchmark stuff
@@ -45,10 +48,12 @@ int main(int argc, char *argv[]) {
     _benchmark_register("draw:render");
     _benchmark_enable = false;
 
-    f64 time_last_frame_sec = 0.0; // for delta time
+    f64 time_last_frame_sec = 0; // for delta time
     bool running = true;
 
     while (running) {
+        input_poll();
+
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -78,14 +83,12 @@ int main(int argc, char *argv[]) {
         arena_reset(frame_arena_ptr);
 
         // timer
-        time_sec = (f64)SDL_GetTicksNS() / 1'000'000'000.0;
+        time_sec = (f64)SDL_GetTicksNS() / 1'000'000'000;
         time_delta_sec = time_sec - time_last_frame_sec;
         time_last_frame_sec = time_sec;
 
         // clamp minimum fps to 5 fps
-        if (time_delta_sec > 0.2) {
-            time_delta_sec = 0.2;
-        }
+        if (time_delta_sec > 0.2) { time_delta_sec = 0.2; }
 
         tick_accumulated_time_sec += time_delta_sec;
 
@@ -128,6 +131,8 @@ int main(int argc, char *argv[]) {
 
             // update late
             game_update_late();
+
+            input_cache_clear();
         }
 
         tick_frame_alpha = tick_accumulated_time_sec / tick_delta_sec;
@@ -136,7 +141,7 @@ int main(int argc, char *argv[]) {
         game_visual();
 
         // rendering
-        SDL_SetRenderDrawColorFloat(renderer, 0.0f, 0.0f, 0.0f, 0.0f);
+        SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
 
         // draw

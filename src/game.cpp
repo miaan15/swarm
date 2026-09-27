@@ -10,10 +10,11 @@ import log;
 import context;
 import draw;
 import entity;
+import input;
 
 export namespace sw {
 
-constexpr u32 NPC_COUNT = 20'000;
+constexpr u32 NPC_COUNT = 200;
 
 constexpr f32 NPC_MIN_X = -10000.0f;
 constexpr f32 NPC_MAX_X =  12800.0f;
@@ -110,7 +111,11 @@ void game_init() {
 }
 
 void game_input() {}
-void game_update() {}
+void game_update() {
+    // if (input_is_key_down_cache(SCANCODE::K)) { log_info("DOWN 0"); }
+    // if (input_is_key_up_cache(SCANCODE::K)) { log_info("UP 11"); }
+    // if (input_is_key_on_cache(SCANCODE::K)) { log_info("ON 222"); }
+}
 void game_update_late() {}
 
 void game_visual() {
