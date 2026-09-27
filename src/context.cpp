@@ -35,6 +35,7 @@ char assets_dir[512];
 // SDL
 SDL_Window *window;
 SDL_Renderer *renderer;
+f32 screen_width, screen_height;
 
 // ARENA
 arena omni_arena;

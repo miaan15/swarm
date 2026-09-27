@@ -18,6 +18,7 @@ import pool_simple;
 import draw;
 
 import context;
+import context_game;
 
 import :chunk;
 
@@ -706,36 +707,34 @@ void _collider_debug_draw() {
     collider *collider_ptr = nullptr;
 
     while (pool_iterate(&collider_sys.collider_pool, &iter_idx, &collider_key, &collider_ptr)) {
-        draw_call *drw = draw_call_make();
-        if (drw) {
-            drw->type = draw_type::RECTANGLE;
-            drw->rectangle.rect[0] = collider_ptr->rect[0];
-            drw->rectangle.rect[1] = collider_ptr->rect[1];
-            drw->rectangle.rect[2] = collider_ptr->rect[2];
-            drw->rectangle.rect[3] = collider_ptr->rect[3];
-            drw->rectangle.thickness = 1;
-            drw->rectangle.color[0] = 0;
-            drw->rectangle.color[1] = 255;
-            drw->rectangle.color[2] = 0;
-            drw->rectangle.color[3] = 255;
-        }
+        draw_call *dc = draw_call_make();
+        dc->type = draw_type::RECTANGLE;
+        dc->rectangle.rect[0] = collider_ptr->rect[0];
+        dc->rectangle.rect[1] = collider_ptr->rect[1];
+        dc->rectangle.rect[2] = collider_ptr->rect[2];
+        dc->rectangle.rect[3] = collider_ptr->rect[3];
+        dc->rectangle.thickness = 1;
+        dc->rectangle.color[0] = 0;
+        dc->rectangle.color[1] = 255;
+        dc->rectangle.color[2] = 0;
+        dc->rectangle.color[3] = 255;
+        draw_call_translate_from_world(dc, main_camera);
     }
 }
 
 void _collider_debug_draw_node_recursive(collider_tree_node *node) {
-    draw_call *drw = draw_call_make();
-    if (drw) {
-        drw->type = draw_type::RECTANGLE;
-        drw->rectangle.rect[0] = node->collider_rect[0];
-        drw->rectangle.rect[1] = node->collider_rect[1];
-        drw->rectangle.rect[2] = node->collider_rect[2];
-        drw->rectangle.rect[3] = node->collider_rect[3];
-        drw->rectangle.thickness = 1;
-        drw->rectangle.color[0] = 255;
-        drw->rectangle.color[1] = 255;
-        drw->rectangle.color[2] = 255;
-        drw->rectangle.color[3] = 255;
-    }
+    draw_call *dc = draw_call_make();
+    dc->type = draw_type::RECTANGLE;
+    dc->rectangle.rect[0] = node->collider_rect[0];
+    dc->rectangle.rect[1] = node->collider_rect[1];
+    dc->rectangle.rect[2] = node->collider_rect[2];
+    dc->rectangle.rect[3] = node->collider_rect[3];
+    dc->rectangle.thickness = 1;
+    dc->rectangle.color[0] = 255;
+    dc->rectangle.color[1] = 255;
+    dc->rectangle.color[2] = 255;
+    dc->rectangle.color[3] = 255;
+    draw_call_translate_from_world(dc, main_camera);
 
     if (node->child[0] != 0) {
         _collider_debug_draw_node_recursive(pool_simple_get(&collider_sys.tree_node_pool, node->child[0]));

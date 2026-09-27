@@ -18,6 +18,7 @@ import pool;
 import draw;
 
 import context;
+import context_game;
 
 import :chunk;
 
@@ -253,18 +254,19 @@ void sprite_sys_draw() {
         chunk_mng_update(&sprite_sys.sprite_chunk_mng, sprite_key, center_pos);
 
         //draw
-        draw_call *drw = draw_call_make();
-        drw->type = draw_type::TEXTURE;
-        drw->texture.texture_idx = sprite_ptr->texture_idx;
-        drw->texture.src_rect[0] = sprite_ptr->src_rect[0];
-        drw->texture.src_rect[1] = sprite_ptr->src_rect[1];
-        drw->texture.src_rect[2] = sprite_ptr->src_rect[2];
-        drw->texture.src_rect[3] = sprite_ptr->src_rect[3];
-        drw->texture.dest_rect[0] = sprite_ptr->interpolated_pos[0];
-        drw->texture.dest_rect[1] = sprite_ptr->interpolated_pos[1];
-        drw->texture.dest_rect[2] = sprite_ptr->dest_rect[2];
-        drw->texture.dest_rect[3] = sprite_ptr->dest_rect[3];
-        drw->sorting = sprite_ptr->sorting;
+        draw_call *dc = draw_call_make();
+        dc->type = draw_type::TEXTURE;
+        dc->texture.texture_idx = sprite_ptr->texture_idx;
+        dc->texture.src_rect[0] = sprite_ptr->src_rect[0];
+        dc->texture.src_rect[1] = sprite_ptr->src_rect[1];
+        dc->texture.src_rect[2] = sprite_ptr->src_rect[2];
+        dc->texture.src_rect[3] = sprite_ptr->src_rect[3];
+        dc->texture.dest_rect[0] = sprite_ptr->interpolated_pos[0];
+        dc->texture.dest_rect[1] = sprite_ptr->interpolated_pos[1];
+        dc->texture.dest_rect[2] = sprite_ptr->dest_rect[2];
+        dc->texture.dest_rect[3] = sprite_ptr->dest_rect[3];
+        dc->sorting = sprite_ptr->sorting;
+        draw_call_translate_from_world(dc, main_camera);
     }
 }
 

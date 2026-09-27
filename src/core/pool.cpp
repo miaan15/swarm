@@ -40,11 +40,6 @@ struct pool {
 
 // ================================================================================================
 
-/**
- * @param p pool pointer
- * @param cap max capacity
- * @param key_field_of_T_offs byte offset of u32 key inside struct T so pool can automatically set its value (leave default if not has that)
- */
 template <typename T>
 void pool_init(pool<T> *p, u32 cap, usize key_field_of_T_offs = _POOL_KEY_FIELD_OF_T_OFFS_DISABLE_VALUE) {
     p->key_field_of_T_offs = key_field_of_T_offs;
@@ -61,12 +56,6 @@ void pool_init(pool<T> *p, u32 cap, usize key_field_of_T_offs = _POOL_KEY_FIELD_
 
 // ================================================================================================
 
-/**
- * @brief create a new instance in the pool
- * @param p pool pointer
- * @param _key out param: key handle
- * @param _ptr out param: pointer to instance's data
- */
 template <typename T>
 void pool_create(pool<T> *p, u32 *out_key, T **out_ptr) {
     // return a new instance that was dead, now alive
@@ -110,12 +99,6 @@ void pool_create(pool<T> *p, u32 *out_key, T **out_ptr) {
     if (out_ptr) { *out_ptr = ptr; }
 }
 
-/**
- * @brief destroy an instance by key
- * @param p pool pointer
- * @param key key handle to destroy
- * @return true if instance was found and killed, false otherwise
- */
 template <typename T>
 bool pool_destroy(pool<T> *p, u32 key) {
     // destroy an instance by key
@@ -165,11 +148,6 @@ bool pool_destroy(pool<T> *p, u32 key) {
     return true;
 }
 
-/**
- * @param p pool pointer
- * @param key key handle
- * @return pointer to instance, or stub pointer if invalid/dead
- */
 template <typename T>
 T *pool_get(pool<T> *p, u32 key) {
     if (key == 0 || key >= p->slot_pool_len) {
@@ -186,11 +164,7 @@ T *pool_get(pool<T> *p, u32 key) {
     assert(idx > 0 && (u32)idx < p->data_list_len);
     return &p->data_list_ptr[idx];
 }
-/**
- * @param p pool pointer
- * @param key key handle
- * @return true if alive, or false if invalid/dead
- */
+
 template <typename T>
 bool pool_alive(pool<T> *p, u32 key) {
     if (key == 0 || key >= p->slot_pool_len) {
@@ -202,13 +176,6 @@ bool pool_alive(pool<T> *p, u32 key) {
     return p->slot_pool_ptr[key] < 0;
 }
 
-/**
- * @param p pool pointer
- * @param iter_idx state index pointer (pass 0 to start)
- * @param out_key out param: instance key
- * @param out_ptr out param: pointer to instance data
- * @return true if instance found, false when finished
- */
 template <typename T>
 bool pool_iterate(pool<T> *p, u32 *iter_idx, u32 *out_key, T **out_ptr) {
     if (*iter_idx == 0) {

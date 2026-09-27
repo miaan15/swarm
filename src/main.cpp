@@ -6,6 +6,7 @@ import log;
 import mem;
 
 import context;
+import context_game;
 
 import draw;
 import entity;
@@ -30,6 +31,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    context_game_init();
+
     game_init();
 
     // benchmark stuff
@@ -51,6 +54,11 @@ int main(int argc, char *argv[]) {
             switch (event.type) {
                 case SDL_EVENT_QUIT: {
                     running = false;
+                    break;
+                }
+                case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+                    screen_width = event.window.data1;
+                    screen_height = event.window.data2;
                     break;
                 }
                 case SDL_EVENT_KEY_DOWN: {

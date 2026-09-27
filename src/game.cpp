@@ -13,7 +13,7 @@ import entity;
 
 export namespace sw {
 
-constexpr u32 NPC_COUNT = 10'000;
+constexpr u32 NPC_COUNT = 20'000;
 
 constexpr f32 NPC_MIN_X = -10000.0f;
 constexpr f32 NPC_MAX_X =  12800.0f;

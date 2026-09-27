@@ -7,6 +7,7 @@
 module;
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <SDL3/SDL_render.h>
@@ -61,11 +62,6 @@ void texture_sys_init(u32 texture_cap) {
     texture_sys.texture_list_len = 1;
 }
 
-/**
- * @param path texture relative path to assets_dir
- * @param scale_mode SDL texture filtering mode (default nearest)
- * @return texture handle index (0 on failure / stub)
- */
 u32 texture_load(const char *path, SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAREST) {
     // load texture using SDL, path is relative to assets_dir
 
@@ -97,10 +93,6 @@ u32 texture_load(const char *path, SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAR
     return idx;
 }
 
-/**
- * @param idx texture handle index
- * @return SDL_Texture pointer, or slot 0 stub texture if invalid
- */
 SDL_Texture *texture_get(u32 idx) {
     if (idx == 0 || idx >= texture_sys.texture_list_len) {
         log_trace("texture_get: texture [%u] invalid => stub", idx);
@@ -119,7 +111,7 @@ enum struct draw_type : u8 {
 };
 
 struct draw_call {
-    u64 sorting;
+    u64 sorting; // the bigger -> the higher priority when draw (use for z sorting)
     draw_type type;
 
     // union data depend on .type
@@ -154,16 +146,25 @@ struct {
     draw_call stub_draw_call;
 } draw_sys = {};
 
+// camera, the way to translate world draw call request to actual screen draw call
+struct camera {
+    f32 pos[2];
+    f32 size; // = the width size; height = size / aspect_ratio
+    // field value = NAN => default value: (so that it look like just screen draw call)
+    // - pos[0] == NAN => pos[0] = 0
+    // - pos[1] == NAN => pos[1] = 0
+    // - size == NAN => pos[0] = screen_height
+};
+constexpr camera DEFAULT_CAMERA = { { NAN, NAN }, NAN };
+
 void draw_sys_init(u32 cap) {
     draw_sys.draw_buffers[0] = (draw_call*)arena_alloc(&omni_arena, cap * sizeof(draw_call));
     draw_sys.draw_buffers[1] = (draw_call*)arena_alloc(&omni_arena, cap * sizeof(draw_call));
     draw_sys.draw_cap = cap;
 }
 
-/**
- * @brief allocate a new draw command in the current frame buffer
- * @return pointer to zeroed struct to fill in, or stub on overflow
- */
+// ================================================================================================
+
 draw_call *draw_call_make() {
     // create a draw call, the returned pointer is supposed to be modified make actual draw
 
@@ -181,6 +182,101 @@ draw_call *draw_call_make() {
 
     return drw;
 }
+
+draw_call *draw_call_make_texture(u32 texture_idx, f32 src_rect[4], f32 dest_rect[4]) {
+    draw_call *dc_ptr = draw_call_make();
+    dc_ptr->type    = draw_type::TEXTURE;
+
+    dc_ptr->texture.texture_idx = texture_idx;
+    memcpy(dc_ptr->texture.src_rect,  src_rect,  sizeof(dc_ptr->texture.src_rect));
+    memcpy(dc_ptr->texture.dest_rect, dest_rect, sizeof(dc_ptr->texture.dest_rect));
+
+    return dc_ptr;
+}
+
+draw_call *draw_call_make_box(f32 rect[4], u8  color[4]) {
+    draw_call *dc_ptr = draw_call_make();
+    dc_ptr->type    = draw_type::BOX;
+
+    memcpy(dc_ptr->box.rect,  rect,  sizeof(dc_ptr->box.rect));
+    memcpy(dc_ptr->box.color, color, sizeof(dc_ptr->box.color));
+
+    return dc_ptr;
+}
+
+draw_call *draw_call_make_rectangle(f32 rect[4], f32 thickness, u8  color[4]) {
+    draw_call *dc_ptr = draw_call_make();
+    dc_ptr->type    = draw_type::RECTANGLE;
+
+    memcpy(dc_ptr->rectangle.rect, rect, sizeof(dc_ptr->rectangle.rect));
+    dc_ptr->rectangle.thickness = thickness;
+    memcpy(dc_ptr->rectangle.color, color, sizeof(dc_ptr->rectangle.color));
+
+    return dc_ptr;
+}
+
+// ================================================================================================
+
+void camera_translate_world_to_screen_point(f32 point[2], camera cam) {
+    assert(point);
+
+    // default fallback
+    if (std::isnan(cam.pos[0])) cam.pos[0] = 0;
+    if (std::isnan(cam.pos[1])) cam.pos[1] = 0;
+    if (std::isnan(cam.size))   cam.size   = (f32)screen_width;
+
+    f32 scale = (f32)screen_width / cam.size;
+    point[0] = (point[0] - cam.pos[0]) * scale;
+    point[1] = (point[1] - cam.pos[1]) * scale;
+}
+
+void camera_translate_world_to_screen_rect(f32 rect[4], camera cam) {
+    assert(point);
+
+    // default fallback
+    if (std::isnan(cam.pos[0])) cam.pos[0] = 0;
+    if (std::isnan(cam.pos[1])) cam.pos[1] = 0;
+    if (std::isnan(cam.size))   cam.size   = (f32)screen_width;
+
+    f32 scale = (f32)screen_width / cam.size;
+    rect[0] = (rect[0] - cam.pos[0]) * scale;
+    rect[1] = (rect[1] - cam.pos[1]) * scale;
+    rect[2] *= scale;
+    rect[3] *= scale;
+}
+
+void camera_resize(camera *cam, f32 pos[2], f32 new_size) {
+    assert(cam);
+
+    f32 scale = new_size / cam->size;
+
+    cam->pos[0] = pos[0] - (pos[0] - cam->pos[0]) * scale;
+    cam->pos[1] = pos[1] - (pos[1] - cam->pos[1]) * scale;
+    cam->size   = new_size;
+}
+
+void draw_call_translate_from_world(draw_call *dc_ptr, camera cam) {
+    assert(dc_ptr);
+
+    switch (dc_ptr->type) {
+        case draw_type::TEXTURE: {
+            camera_translate_world_to_screen_rect(dc_ptr->texture.dest_rect, cam);
+            break;
+        }
+        case draw_type::BOX: {
+            camera_translate_world_to_screen_rect(dc_ptr->box.rect, cam);
+            break;
+        }
+        case draw_type::RECTANGLE: {
+            camera_translate_world_to_screen_rect(dc_ptr->rectangle.rect, cam);
+            dc_ptr->rectangle.thickness *= ((f32)screen_width / cam.size);
+            break;
+        }
+        default: break;
+    }
+}
+
+// ================================================================================================
 
 void draw_sys_sort() {
     constexpr u32 RADIX_SORT_BITS  = 8;
@@ -260,7 +356,7 @@ void draw_sys_render() {
                 SDL_FRect src_rect  = { drw->texture.src_rect[0],  drw->texture.src_rect[1],  drw->texture.src_rect[2],  drw->texture.src_rect[3] };
                 SDL_FRect dest_rect = { drw->texture.dest_rect[0], drw->texture.dest_rect[1], drw->texture.dest_rect[2], drw->texture.dest_rect[3] };
 
-                const SDL_FRect *src_rect_ptr = (src_rect.w > 0.0f && src_rect.h > 0.0f) ? &src_rect : nullptr;
+                SDL_FRect *src_rect_ptr = (src_rect.w > 0 && src_rect.h > 0) ? &src_rect : nullptr;
 
                 SDL_RenderTexture(renderer, tex, src_rect_ptr, &dest_rect);
                 break;
@@ -291,15 +387,15 @@ void draw_sys_render() {
 
                 SDL_FRect rect = { drw->rectangle.rect[0], drw->rectangle.rect[1], drw->rectangle.rect[2], drw->rectangle.rect[3] };
 
-                if (drw->rectangle.thickness <= 1.0f) {
+                if (drw->rectangle.thickness <= 1) {
                     SDL_RenderRect(renderer, &rect);
                 } else {
                     f32 t = drw->rectangle.thickness;
                     SDL_FRect borders[4] = {
                         { rect.x, rect.y, rect.w, t },
                         { rect.x, rect.y + rect.h - t, rect.w, t },
-                        { rect.x, rect.y + t, t, rect.h - (t * 2.0f) },
-                        { rect.x + rect.w - t, rect.y + t, t, rect.h - (t * 2.0f) }
+                        { rect.x, rect.y + t, t, rect.h - (t * 2) },
+                        { rect.x + rect.w - t, rect.y + t, t, rect.h - (t * 2) }
                     };
                     SDL_RenderFillRects(renderer, borders, 4);
                 }
