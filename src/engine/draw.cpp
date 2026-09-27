@@ -149,6 +149,8 @@ struct {
     u32 draw_cap;
     u32 draw_len;
 
+    usize cur_buffer_idx;
+
     draw_call stub_draw_call;
 } draw_sys = {};
 
@@ -156,7 +158,6 @@ void draw_sys_init(u32 cap) {
     draw_sys.draw_buffers[0] = (draw_call*)arena_alloc(&omni_arena, cap * sizeof(draw_call));
     draw_sys.draw_buffers[1] = (draw_call*)arena_alloc(&omni_arena, cap * sizeof(draw_call));
     draw_sys.draw_cap = cap;
-    draw_sys.draw_len = 0;
 }
 
 /**
@@ -181,11 +182,9 @@ draw_call *draw_call_make() {
     return drw;
 }
 
-void draw_sys_present() {
+void draw_sys_sort() {
     constexpr u32 RADIX_SORT_BITS  = 8;
     constexpr u32 RADIX_SORT_COUNT = 1 << RADIX_SORT_BITS;
-
-    u32 buffer_idx = 0;
 
     // radix sort pass on .type to batch pipeline state
     {
@@ -194,7 +193,7 @@ void draw_sys_present() {
 
         // count histogram
         for (u32 i = 0; i < draw_sys.draw_len; ++i) {
-            u8 slot = (u8)draw_sys.draw_buffers[buffer_idx][i].type;
+            u8 slot = (u8)draw_sys.draw_buffers[draw_sys.cur_buffer_idx][i].type;
             counts[slot]++;
         }
 
@@ -206,14 +205,14 @@ void draw_sys_present() {
 
         // scatter to other buffer
         for (u32 i = 0; i < draw_sys.draw_len; ++i) {
-            u8 slot = (u8)draw_sys.draw_buffers[buffer_idx][i].type;
+            u8 slot = (u8)draw_sys.draw_buffers[draw_sys.cur_buffer_idx][i].type;
             assert(offs[slot] < draw_sys.draw_len);
-            draw_sys.draw_buffers[1 - buffer_idx][offs[slot]] = draw_sys.draw_buffers[buffer_idx][i];
+            draw_sys.draw_buffers[1 - draw_sys.cur_buffer_idx][offs[slot]] = draw_sys.draw_buffers[draw_sys.cur_buffer_idx][i];
             offs[slot]++;
         }
 
         // swap buffer
-        buffer_idx = 1 - buffer_idx;
+        draw_sys.cur_buffer_idx = 1 - draw_sys.cur_buffer_idx;
     }
 
     // radix sort on .sorting
@@ -223,7 +222,7 @@ void draw_sys_present() {
 
         // count histogram
         for (u32 i = 0; i < draw_sys.draw_len; ++i) {
-            u32 slot = (u32)((draw_sys.draw_buffers[buffer_idx][i].sorting >> shift) & (RADIX_SORT_COUNT - 1));
+            u32 slot = (u32)((draw_sys.draw_buffers[draw_sys.cur_buffer_idx][i].sorting >> shift) & (RADIX_SORT_COUNT - 1));
             assert(slot < RADIX_SORT_COUNT);
             counts[slot]++;
         }
@@ -236,19 +235,21 @@ void draw_sys_present() {
 
         // scatter to other buffer
         for (u32 i = 0; i < draw_sys.draw_len; ++i) {
-            u32 slot = (u32)((draw_sys.draw_buffers[buffer_idx][i].sorting >> shift) & (RADIX_SORT_COUNT - 1));
+            u32 slot = (u32)((draw_sys.draw_buffers[draw_sys.cur_buffer_idx][i].sorting >> shift) & (RADIX_SORT_COUNT - 1));
             assert(slot < RADIX_SORT_COUNT);
             assert(offs[slot] < draw_sys.draw_len);
-            draw_sys.draw_buffers[1 - buffer_idx][offs[slot]] = draw_sys.draw_buffers[buffer_idx][i];
+            draw_sys.draw_buffers[1 - draw_sys.cur_buffer_idx][offs[slot]] = draw_sys.draw_buffers[draw_sys.cur_buffer_idx][i];
             offs[slot]++;
         }
 
         // swap buffer
-        buffer_idx = 1 - buffer_idx;
+        draw_sys.cur_buffer_idx = 1 - draw_sys.cur_buffer_idx;
     }
+}
 
+void draw_sys_render() {
     // actual draw
-    draw_call *draw_buffer = draw_sys.draw_buffers[buffer_idx];
+    draw_call *draw_buffer = draw_sys.draw_buffers[draw_sys.cur_buffer_idx];
     for (u32 i = 0; i < draw_sys.draw_len; ++i) {
         draw_call *drw = &draw_buffer[i];
 
@@ -309,8 +310,12 @@ void draw_sys_present() {
         }
     }
 
-    draw_sys.draw_len = 0;
+}
+
+void draw_sys_reset() {
     draw_sys.stub_draw_call = {};
+    draw_sys.draw_len = 0;
+    draw_sys.cur_buffer_idx = 0;
 }
 
 }

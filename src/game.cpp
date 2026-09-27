@@ -114,7 +114,6 @@ void game_update() {}
 void game_update_late() {}
 
 void game_visual() {
-    log_trace("fps: %f", 1.0 / time_delta_sec);
 }
 
 void game_draw() {

@@ -2,13 +2,17 @@
 #include <SDL3/SDL.h>
 
 import def;
+import log;
 import mem;
+
 import context;
 
 import draw;
 import entity;
 
 import game;
+
+import benchmark;
 
 using namespace sw;
 
@@ -28,7 +32,17 @@ int main(int argc, char *argv[]) {
 
     game_init();
 
-    f64 time_last_frame_sec = 0.0;
+    // benchmark stuff
+    _benchmark_register("game:update");
+    _benchmark_register("action:update");
+    _benchmark_register("entity:update");
+    _benchmark_register("collider:update");
+    _benchmark_register("sprite:update");
+    _benchmark_register("draw:sort");
+    _benchmark_register("draw:render");
+    _benchmark_enable = false;
+
+    f64 time_last_frame_sec = 0.0; // for delta time
     bool running = true;
 
     while (running) {
@@ -56,7 +70,7 @@ int main(int argc, char *argv[]) {
         arena_reset(frame_arena_ptr);
 
         // timer
-        time_sec = static_cast<f64>(SDL_GetTicksNS()) / 1'000'000'000.0;
+        time_sec = (f64)SDL_GetTicksNS() / 1'000'000'000.0;
         time_delta_sec = time_sec - time_last_frame_sec;
         time_last_frame_sec = time_sec;
 
@@ -81,14 +95,28 @@ int main(int argc, char *argv[]) {
             tick_arena_ptr = &tick_arena_raw[tick_arena_cur_idx];
             arena_reset(tick_arena_ptr);
 
+            //
+            _benchmark_enable = true;
+
             // update
+            _benchmark_start("game:update");
             game_update();
+            _benchmark_end("game:update");
 
             // systems
             sprite_sys_update_early();
+
+            _benchmark_start("action:update");
             action_sys_update();
+            _benchmark_end("action:update");
+
+            _benchmark_start("entity:update");
             entity_sys_update();
+            _benchmark_end("entity:update");
+
+            _benchmark_start("collider:update");
             collider_sys_update();
+            _benchmark_end("collider:update");
 
             // update late
             game_update_late();
@@ -107,13 +135,30 @@ int main(int argc, char *argv[]) {
         game_draw();
 
         // systems
+        _benchmark_start("sprite:update");
         sprite_sys_draw();
-        draw_sys_present();
+        _benchmark_end("sprite:update");
+
+        _benchmark_start("draw:sort");
+        draw_sys_sort();
+        _benchmark_end("draw:sort");
+
+        _benchmark_start("draw:render");
+        draw_sys_render();
+        _benchmark_end("draw:render");
+
+        draw_sys_reset();
 
         SDL_RenderPresent(renderer);
 
         tick_count_this_frame = 0;
+
+        // benchmark update, reset
+        _benchmark_update_registered();
+        _benchmark_enable = false;
     }
+
+    printf("%s\n", _benchmark_info_table_str(8, 20).c_str());
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
