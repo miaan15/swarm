@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
             tick_accumulated_time_sec -= tick_delta_sec;
             tick_count_this_frame += 1;
 
-            // Swap tick arena
+            // swap tick arena
             tick_arena_cur_idx = 1 - tick_arena_cur_idx;
             tick_arena_ptr = &tick_arena_raw[tick_arena_cur_idx];
             arena_reset(tick_arena_ptr);
@@ -136,6 +136,11 @@ int main(int argc, char *argv[]) {
         }
 
         tick_frame_alpha = tick_accumulated_time_sec / tick_delta_sec;
+
+        // swap frame arena
+        frame_arena_cur_idx = 1 - frame_arena_cur_idx;
+        frame_arena_ptr = &frame_arena_raw[frame_arena_cur_idx];
+        arena_reset(frame_arena_ptr);
 
         // visual
         game_visual();

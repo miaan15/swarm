@@ -63,6 +63,7 @@ void _chunk_pos_cal(chunk_mng *mng, f32 world_pos[2], i32 out_pos[2]);
 
 // add_or_get in map, return true if add, false if get
 bool _chunk_map_open(chunk_mng *mng, i32 pos[2], u32 *out_idx, chunk_slot **out_ptr);
+bool _chunk_map_find(chunk_mng *mng, i32 pos[2], u32 *out_idx, chunk_slot **out_ptr);
 
 // ================================================================================================
 
@@ -271,7 +272,9 @@ void chunk_mng_query(chunk_mng *mng, f32 rect[4], u32 **out_list, u32 *out_list_
             u32 slot_idx = 0;
             chunk_slot *slot_ptr = nullptr;
 
-            if (! _chunk_map_open(mng, target_chunk_pos, &slot_idx, &slot_ptr)) { continue; }
+            // if chunk not exist or no points inside
+            if (!_chunk_map_find(mng, target_chunk_pos, &slot_idx, &slot_ptr)) { continue; }
+            if (slot_ptr->point_list_begin == 0) { continue; }
 
             // iterate through points stored in current chunk slot
             u32 point_key = slot_ptr->point_list_begin;
@@ -545,6 +548,44 @@ bool _chunk_map_open(chunk_mng *mng, i32 pos[2], u32 *out_idx, chunk_slot **out_
     if (out_ptr) { *out_ptr = &mng->chunk_slot_map[probe_slot_idx]; }
 
     return is_created_new_slot;
+}
+
+bool _chunk_map_find(chunk_mng *mng, i32 pos[2], u32 *out_idx, chunk_slot **out_ptr) {
+    u64 coord_x = (u64)(u32)pos[0];
+    u64 coord_y = (u64)(u32)pos[1];
+    u64 hash_key = (coord_x << 32) | coord_y;
+
+    hash_key ^= hash_key >> 30;
+    hash_key *= 0xbf58476d1ce4e5b9ULL;
+    hash_key ^= hash_key >> 27;
+    hash_key *= 0x94d049bb133111ebULL;
+    hash_key ^= hash_key >> 31;
+
+    u32 first_slot_idx = (u32)(hash_key % (u64)(mng->slot_map_cap - 1)) + 1;
+    u32 probe_slot_idx = first_slot_idx;
+
+    while (true) {
+        chunk_slot *slot_entry_ptr = &mng->chunk_slot_map[probe_slot_idx];
+
+        if (!slot_entry_ptr->map_alive) {
+            return false;
+        }
+
+        if (slot_entry_ptr->chunk_pos[0] == pos[0] && slot_entry_ptr->chunk_pos[1] == pos[1]) {
+            if (out_idx) { *out_idx = probe_slot_idx; }
+            if (out_ptr) { *out_ptr = slot_entry_ptr; }
+            return true;
+        }
+
+        probe_slot_idx++;
+        if (probe_slot_idx >= mng->slot_map_cap) {
+            probe_slot_idx = 1;
+        }
+
+        if (probe_slot_idx == first_slot_idx) {
+            return false;
+        }
+    }
 }
 
 }

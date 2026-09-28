@@ -34,9 +34,10 @@ struct status {
     f32 damage;
 };
 
-struct {
+struct status_system {
     pool_simple<status> pool;
-} status_sys = {};
+};
+inline status_system status_sys = {};
 
 // ================================================================================================
 

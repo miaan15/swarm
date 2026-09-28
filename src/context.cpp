@@ -13,7 +13,7 @@ export namespace sw {
 // CONFIG
 constexpr u32 TPS = 20;
 
-constexpr usize OMNI_ARENA_SIZE = 500 << 10 << 10;
+constexpr usize OMNI_ARENA_SIZE = 1000 << 10 << 10;
 constexpr usize TICK_ARENA_SIZE = 50 << 10 << 10;
 constexpr usize FRAME_ARENA_SIZE = 50 << 10 << 10;
 

@@ -141,14 +141,15 @@ enum struct SCANCODE {
     RGUI = SDL_SCANCODE_RGUI,
 };
 
-struct {
+struct input_system {
     const bool *cur_keyboard_state;
     bool *last_poll_keyboard_state;
     u8 *cache_keyboard_state;
     // cache keyboard state is masked as 3bits: bit-0: down; bit-1: up; bit-2: on
     // but the way this cache - every poll just add more to cache, not overwrite, make the mask not really straight forward
     int numkeys;
-} input_sys = {};
+};
+inline input_system input_sys = {};
 
 void input_init() {
     input_sys.cur_keyboard_state = SDL_GetKeyboardState(&input_sys.numkeys);

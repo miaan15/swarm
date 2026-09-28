@@ -26,11 +26,12 @@ export namespace sw {
 // TEXTURE
 // ================================================================================================
 
-struct {
+struct texture_system {
     SDL_Texture **texture_list_ptr;
     u32 texture_cap;
     u32 texture_list_len;
-} texture_sys = {};
+};
+inline texture_system texture_sys = {};
 
 void texture_sys_init(u32 texture_cap) {
     texture_sys.texture_list_ptr = (SDL_Texture**)arena_alloc(&omni_arena, texture_cap * sizeof(SDL_Texture*));
@@ -135,7 +136,7 @@ struct draw_call {
     };
 };
 
-struct {
+struct draw_system {
     draw_call *draw_buffers[2];
     // 2 draw buffer for radix sort algorithm, but default just use the index-0 buffer
     u32 draw_cap;
@@ -144,7 +145,8 @@ struct {
     usize cur_buffer_idx;
 
     draw_call stub_draw_call;
-} draw_sys = {};
+};
+inline draw_system draw_sys = {};
 
 // camera, the way to translate world draw call request to actual screen draw call
 struct camera {
@@ -231,7 +233,7 @@ void camera_translate_world_to_screen_point(f32 point[2], camera cam) {
 }
 
 void camera_translate_world_to_screen_rect(f32 rect[4], camera cam) {
-    assert(point);
+    assert(rect);
 
     // default fallback
     if (std::isnan(cam.pos[0])) cam.pos[0] = 0;
@@ -251,6 +253,14 @@ void camera_get_center(camera *cam, f32 out_center_pos[2]) {
     f32 height = cam->size / screen_width * screen_height;
     out_center_pos[0] = cam->pos[0] + width  / 2;
     out_center_pos[1] = cam->pos[1] + height / 2;
+}
+
+f32 camera_width(camera *cam) {
+    return cam->size;
+}
+
+f32 camera_height(camera *cam) {
+    return cam->size / screen_width * screen_height;
 }
 
 void camera_resize(camera *cam, f32 pos[2], f32 new_size) {
@@ -413,7 +423,6 @@ void draw_sys_render() {
             default: break;
         }
     }
-
 }
 
 void draw_sys_reset() {

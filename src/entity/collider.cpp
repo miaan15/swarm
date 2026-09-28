@@ -65,7 +65,7 @@ struct collider_tree_node {
     u32 height;
 };
 
-struct {
+struct collider_system {
     // collider
     pool<collider> collider_pool;
     chunk_mng collider_chunk;
@@ -77,7 +77,8 @@ struct {
     u32 tree_root_node_idx;
 
     f32 fat_aabb_offset;
-} collider_sys = {};
+};
+inline collider_system collider_sys = {};
 
 // ================================================================================================
 

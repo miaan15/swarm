@@ -55,10 +55,11 @@ struct entity {
     u32 status_list_len;
 };
 
-struct {
+struct entity_system {
     pool<entity> entity_pool;
     chunk_mng entity_chunk_mng;
-} entity_sys = {};
+};
+inline entity_system entity_sys = {};
 
 // ================================================================================================
 

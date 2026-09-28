@@ -21,11 +21,12 @@ struct action {
 };
 
 // action_sys stores all the actions in a single tick
-struct {
+struct action_system {
     action *buffer_ptr;
     u32 buffer_cap;
     u32 buffer_len;
-} action_sys = {};
+};
+inline action_system action_sys = {};
 
 void action_sys_init(u32 cap) {
     action_sys.buffer_ptr = (action*)arena_alloc(&omni_arena, cap * sizeof(action));
