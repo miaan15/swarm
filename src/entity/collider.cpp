@@ -708,7 +708,7 @@ void _collider_debug_draw() {
     collider *collider_ptr = nullptr;
 
     while (pool_iterate(&collider_sys.collider_pool, &iter_idx, &collider_key, &collider_ptr)) {
-        draw_call *dc = draw_call_make();
+        draw_call *dc = draw_call_make_raw(); // FIXME
         dc->type = draw_type::RECTANGLE;
         dc->rectangle.rect[0] = collider_ptr->rect[0];
         dc->rectangle.rect[1] = collider_ptr->rect[1];
@@ -724,7 +724,7 @@ void _collider_debug_draw() {
 }
 
 void _collider_debug_draw_node_recursive(collider_tree_node *node) {
-    draw_call *dc = draw_call_make();
+    draw_call *dc = draw_call_make_raw(); // FIXME
     dc->type = draw_type::RECTANGLE;
     dc->rectangle.rect[0] = node->collider_rect[0];
     dc->rectangle.rect[1] = node->collider_rect[1];

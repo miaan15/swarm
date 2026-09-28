@@ -15,7 +15,7 @@ import input;
 
 export namespace sw {
 
-constexpr u32 NPC_COUNT = 100'000;
+constexpr u32 NPC_COUNT = 10'000;
 
 constexpr f32 NPC_MIN_X = -50000.0f;
 constexpr f32 NPC_MAX_X =  50000.0f;
@@ -93,9 +93,9 @@ void game_init() {
         f32 sprite_offset[2] = { -16.0f, -16.0f };
         entity_new_sprite(ett->pool_key, profile_idx, sprite_offset, 0, nullptr, nullptr, nullptr);
 
-        // f32 col_size[2] = { 32.0f, 32.0f };
-        // f32 col_offset[2] = { -16.0f, -16.0f };
-        // entity_new_collider(ett->pool_key, col_size, col_offset, 0, nullptr, nullptr);
+        f32 col_size[2] = { 32.0f, 32.0f };
+        f32 col_offset[2] = { -16.0f, -16.0f };
+        entity_new_collider(ett->pool_key, col_size, col_offset, 0, nullptr, nullptr);
 
         f32 speed = dist_speed(rng);
         f32 angle = dist_angle(rng);
@@ -103,12 +103,12 @@ void game_init() {
         ett->vel[1] = std::sin(angle) * speed;
 
         // more
-        // u32 hair_profile_idx = gender * 2 + 1 + 6 + (dist_u32(rng) % 2);
-        // f32 hair_offset[2] = {
-        //     -16.0f + HAIR_OFFSET_BY_RACES[race][0],
-        //     -16.0f + HAIR_OFFSET_BY_RACES[race][1]
-        // };
-        // entity_new_sprite(ett->pool_key, hair_profile_idx, hair_offset, 1, nullptr, nullptr, nullptr);
+        u32 hair_profile_idx = gender * 2 + 1 + 6 + (dist_u32(rng) % 2);
+        f32 hair_offset[2] = {
+            -16.0f + HAIR_OFFSET_BY_RACES[race][0],
+            -16.0f + HAIR_OFFSET_BY_RACES[race][1]
+        };
+        entity_new_sprite(ett->pool_key, hair_profile_idx, hair_offset, 1, nullptr, nullptr, nullptr);
     }
 }
 

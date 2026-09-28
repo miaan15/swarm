@@ -264,19 +264,11 @@ void sprite_sys_draw() {
         u32 sprite_key = 0;
         sprite *sprite_ptr = nullptr;
         while (pool_iterate(&sprite_sys.sprite_pool, &iter_idx, &sprite_key, &sprite_ptr)) {
-            draw_call *dc = draw_call_make();
-            dc->type = draw_type::TEXTURE;
-            dc->texture.texture_idx = sprite_ptr->texture_idx;
-            dc->texture.src_rect[0] = sprite_ptr->src_rect[0];
-            dc->texture.src_rect[1] = sprite_ptr->src_rect[1];
-            dc->texture.src_rect[2] = sprite_ptr->src_rect[2];
-            dc->texture.src_rect[3] = sprite_ptr->src_rect[3];
-            dc->texture.dest_rect[0] = sprite_ptr->interpolated_pos[0];
-            dc->texture.dest_rect[1] = sprite_ptr->interpolated_pos[1];
-            dc->texture.dest_rect[2] = sprite_ptr->dest_rect[2];
-            dc->texture.dest_rect[3] = sprite_ptr->dest_rect[3];
-            dc->sorting = sprite_ptr->sorting;
-            draw_call_translate_from_world(dc, main_camera);
+            f32 draw_dest_rect[4] = { sprite_ptr->interpolated_pos[0],
+                                      sprite_ptr->interpolated_pos[1],
+                                      sprite_ptr->dest_rect[2],
+                                      sprite_ptr->dest_rect[3] };
+            draw_call_world_make_texture(main_camera, sprite_ptr->texture_idx, sprite_ptr->src_rect, draw_dest_rect, sprite_ptr->sorting);
         }
     } else { // culling enable
         // culling
@@ -295,20 +287,11 @@ void sprite_sys_draw() {
             //     sprite_ptr->interpolated_pos[1] <= sprite_sys.retain_culling_rect[1] + sprite_sys.retain_culling_rect[3] &&
             //     sprite_ptr->interpolated_pos[1] + sprite_ptr->dest_rect[3] >= sprite_sys.retain_culling_rect[1]) {
             //
-                // draw
-                draw_call *dc = draw_call_make();
-                dc->type = draw_type::TEXTURE;
-                dc->texture.texture_idx = sprite_ptr->texture_idx;
-                dc->texture.src_rect[0] = sprite_ptr->src_rect[0];
-                dc->texture.src_rect[1] = sprite_ptr->src_rect[1];
-                dc->texture.src_rect[2] = sprite_ptr->src_rect[2];
-                dc->texture.src_rect[3] = sprite_ptr->src_rect[3];
-                dc->texture.dest_rect[0] = sprite_ptr->interpolated_pos[0];
-                dc->texture.dest_rect[1] = sprite_ptr->interpolated_pos[1];
-                dc->texture.dest_rect[2] = sprite_ptr->dest_rect[2];
-                dc->texture.dest_rect[3] = sprite_ptr->dest_rect[3];
-                dc->sorting = sprite_ptr->sorting;
-                draw_call_translate_from_world(dc, main_camera);
+            f32 draw_dest_rect[4] = { sprite_ptr->interpolated_pos[0],
+                                      sprite_ptr->interpolated_pos[1],
+                                      sprite_ptr->dest_rect[2],
+                                      sprite_ptr->dest_rect[3] };
+            draw_call_world_make_texture(main_camera, sprite_ptr->texture_idx, sprite_ptr->src_rect, draw_dest_rect, sprite_ptr->sorting);
             // }
         }
     }

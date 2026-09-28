@@ -167,7 +167,7 @@ void draw_sys_init(u32 cap) {
 
 // ================================================================================================
 
-draw_call *draw_call_make() {
+draw_call *draw_call_make_raw() {
     // create a draw call, the returned pointer is supposed to be modified make actual draw
 
     if (draw_sys.draw_len >= draw_sys.draw_cap) {
@@ -185,36 +185,70 @@ draw_call *draw_call_make() {
     return drw;
 }
 
-draw_call *draw_call_make_texture(u32 texture_idx, f32 src_rect[4], f32 dest_rect[4]) {
-    draw_call *dc_ptr = draw_call_make();
-    dc_ptr->type    = draw_type::TEXTURE;
+draw_call *draw_call_make_texture(u32 texture_idx, f32 src_rect[4], f32 dest_rect[4], u64 sorting = 0) {
+    // too small
+    if (dest_rect[2] < .5f || dest_rect[3] < .5f) { return &draw_sys.stub_draw_call; }
 
-    dc_ptr->texture.texture_idx = texture_idx;
-    memcpy(dc_ptr->texture.src_rect,  src_rect,  sizeof(dc_ptr->texture.src_rect));
-    memcpy(dc_ptr->texture.dest_rect, dest_rect, sizeof(dc_ptr->texture.dest_rect));
+    // out of view
+    if (dest_rect[0] + dest_rect[2] <= 0.0f || dest_rect[0] >= (f32)screen_width ||
+        dest_rect[1] + dest_rect[3] <= 0.0f || dest_rect[1] >= (f32)screen_height) {
+        return &draw_sys.stub_draw_call;
+    }
 
-    return dc_ptr;
+    draw_call *dc = draw_call_make_raw();
+    dc->type    = draw_type::TEXTURE;
+
+    dc->texture.texture_idx = texture_idx;
+    memcpy(dc->texture.src_rect,  src_rect,  sizeof(dc->texture.src_rect));
+    memcpy(dc->texture.dest_rect, dest_rect, sizeof(dc->texture.dest_rect));
+    dc->sorting = sorting;
+
+    return dc;
 }
 
-draw_call *draw_call_make_box(f32 rect[4], u8  color[4]) {
-    draw_call *dc_ptr = draw_call_make();
-    dc_ptr->type    = draw_type::BOX;
+draw_call *draw_call_make_box(f32 rect[4], u8 color[4], u64 sorting = 0) {
+    // too small or color = 0
+    if (rect[2] < 0.5f || rect[3] < 0.5f || color[3] == 0) {
+        return &draw_sys.stub_draw_call;
+    }
 
-    memcpy(dc_ptr->box.rect,  rect,  sizeof(dc_ptr->box.rect));
-    memcpy(dc_ptr->box.color, color, sizeof(dc_ptr->box.color));
+    // out of view
+    if (rect[0] + rect[2] <= 0.0f || rect[0] >= (f32)screen_width ||
+        rect[1] + rect[3] <= 0.0f || rect[1] >= (f32)screen_height) {
+        return &draw_sys.stub_draw_call;
+    }
 
-    return dc_ptr;
+    draw_call *dc = draw_call_make_raw();
+    dc->type    = draw_type::BOX;
+
+    memcpy(dc->box.rect,  rect,  sizeof(dc->box.rect));
+    memcpy(dc->box.color, color, sizeof(dc->box.color));
+    dc->sorting = sorting;
+
+    return dc;
 }
 
-draw_call *draw_call_make_rectangle(f32 rect[4], f32 thickness, u8  color[4]) {
-    draw_call *dc_ptr = draw_call_make();
-    dc_ptr->type    = draw_type::RECTANGLE;
+draw_call *draw_call_make_rectangle(f32 rect[4], f32 thickness, u8 color[4], u64 sorting = 0) {
+    // too small or thinkness too small or color = 0
+    if (rect[2] < 0.5f || rect[3] < 0.5f || thickness < 0.5f || color[3] == 0) {
+        return &draw_sys.stub_draw_call;
+    }
 
-    memcpy(dc_ptr->rectangle.rect, rect, sizeof(dc_ptr->rectangle.rect));
-    dc_ptr->rectangle.thickness = thickness;
-    memcpy(dc_ptr->rectangle.color, color, sizeof(dc_ptr->rectangle.color));
+    // out of view
+    if (rect[0] + rect[2] <= 0.0f || rect[0] >= (f32)screen_width ||
+        rect[1] + rect[3] <= 0.0f || rect[1] >= (f32)screen_height) {
+        return &draw_sys.stub_draw_call;
+    }
 
-    return dc_ptr;
+    draw_call *dc = draw_call_make_raw();
+    dc->type    = draw_type::RECTANGLE;
+
+    memcpy(dc->rectangle.rect, rect, sizeof(dc->rectangle.rect));
+    dc->rectangle.thickness = thickness;
+    memcpy(dc->rectangle.color, color, sizeof(dc->rectangle.color));
+    dc->sorting = sorting;
+
+    return dc;
 }
 
 // ================================================================================================
@@ -273,25 +307,56 @@ void camera_resize(camera *cam, f32 pos[2], f32 new_size) {
     cam->size   = new_size;
 }
 
-void draw_call_translate_from_world(draw_call *dc_ptr, camera cam) {
-    assert(dc_ptr);
+void draw_call_translate_from_world(draw_call *dc, camera cam) {
+    assert(dc);
 
-    switch (dc_ptr->type) {
+    switch (dc->type) {
         case draw_type::TEXTURE: {
-            camera_translate_world_to_screen_rect(dc_ptr->texture.dest_rect, cam);
+            camera_translate_world_to_screen_rect(dc->texture.dest_rect, cam);
             break;
         }
         case draw_type::BOX: {
-            camera_translate_world_to_screen_rect(dc_ptr->box.rect, cam);
+            camera_translate_world_to_screen_rect(dc->box.rect, cam);
             break;
         }
         case draw_type::RECTANGLE: {
-            camera_translate_world_to_screen_rect(dc_ptr->rectangle.rect, cam);
-            dc_ptr->rectangle.thickness *= ((f32)screen_width / cam.size);
+            camera_translate_world_to_screen_rect(dc->rectangle.rect, cam);
+            dc->rectangle.thickness *= ((f32)screen_width / cam.size);
             break;
         }
         default: break;
     }
+}
+
+// ================================================================================================
+
+// for world optimize
+draw_call *draw_call_world_make_texture(camera cam, u32 texture_idx, f32 src_rect[4], f32 dest_rect[4], u64 sorting = 0) {
+    f32 screen_dest[4];
+    memcpy(screen_dest, dest_rect, sizeof(screen_dest));
+    camera_translate_world_to_screen_rect(screen_dest, cam);
+
+    return draw_call_make_texture(texture_idx, src_rect, screen_dest, sorting);
+}
+
+draw_call *draw_call_world_make_box(camera cam, f32 rect[4], u8 color[4], u64 sorting = 0) {
+    f32 screen_rect[4];
+    memcpy(screen_rect, rect, sizeof(screen_rect));
+    camera_translate_world_to_screen_rect(screen_rect, cam);
+
+    return draw_call_make_box(screen_rect, color, sorting);
+}
+
+draw_call *draw_call_world_make_rectangle(camera cam, f32 rect[4], f32 thickness, u8 color[4], u64 sorting = 0) {
+    f32 screen_rect[4];
+    memcpy(screen_rect, rect, sizeof(screen_rect));
+    camera_translate_world_to_screen_rect(screen_rect, cam);
+
+    f32 cam_size = std::isnan(cam.size) ? (f32)screen_width : cam.size;
+    f32 scale = (f32)screen_width / cam_size;
+    f32 screen_thickness = thickness * scale;
+
+    return draw_call_make_rectangle(screen_rect, screen_thickness, color, sorting);
 }
 
 // ================================================================================================
